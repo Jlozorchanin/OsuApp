@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,8 +33,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.compose.OsuAppTheme
+import com.example.osuapp.screens.WelcomeScreen
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -49,12 +53,11 @@ class MainActivity : ComponentActivity() {
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
                     val isFirstLaunch = provider.getInfo.collectAsState(initial = true).value
-
+                    val scope = rememberCoroutineScope()
                     if (isFirstLaunch){
-                        WelcomeScreen()
-                    }
-                    else{
-                        TestScreen()
+                        WelcomeScreen{scope.launch{provider.saveInfo(false)}}
+                    } else{
+                        MainScreen()
                     }
                 }
             }
@@ -64,43 +67,13 @@ class MainActivity : ComponentActivity() {
 
 }
 
-@Composable
-fun WelcomeScreen(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-        Text(text = "Hello buddy")
-    }
 
-}
 
 @Composable
-fun TestScreen(modifier: Modifier = Modifier) {
-    Box(modifier =modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-        Column(modifier = Modifier
-            .fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally) {
+fun MainScreen(modifier: Modifier = Modifier) {
 
-            Box(modifier = Modifier
-                .padding(16.dp)
-                .size(140.dp, 100.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.primary)
-            )
-            Box(modifier = Modifier
-                .padding(16.dp)
-                .size(140.dp, 100.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.secondary)
-            )
-            Box(modifier = Modifier
-                .padding(16.dp)
-                .size(140.dp, 100.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.tertiary)
-            )
 
-        }
-    }
+
 }
 
 
