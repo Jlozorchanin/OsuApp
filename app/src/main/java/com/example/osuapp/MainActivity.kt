@@ -22,10 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
@@ -33,15 +36,22 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.compose.OsuAppTheme
 import com.example.osuapp.api.AuthUser
 import com.example.osuapp.api.AuthVM
 import com.example.osuapp.screens.WelcomeScreen
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import okhttp3.internal.notifyAll
+import java.text.SimpleDateFormat
+import java.time.Clock
 
 class MainActivity : ComponentActivity() {
     private val authVM by viewModels<AuthVM>()
@@ -57,17 +67,36 @@ class MainActivity : ComponentActivity() {
             OsuAppTheme(darkTheme = true) {
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
-                    val isFirstLaunch = provider.getInfo.collectAsState(initial = true).value
+                    val currentDate = System.currentTimeMillis()/1000
                     val scope = rememberCoroutineScope()
                     val tokenValue = authVM.tokenState.collectAsState()
-//                    LaunchedEffect(true) {
-//                        authVM.authUser()
-//                    }
-                    if (!isFirstLaunch){
-                        MainScreen()
-                    } else{
-                        WelcomeScreen{scope.launch{provider.saveInfo(false)}}
+                    val isFirstLaunch = remember {
+                        mutableStateOf(false)
                     }
+                    LaunchedEffect(key1 = true) {
+                        provider.getInfo.collect{
+                            isFirstLaunch.value = it
+                        }
+                        val tokenTime = provider.getTokenDate.first()
+                        if ((currentDate.toInt() - tokenTime.toString().toInt()) > 86000 ){
+                            authVM.authUser()
+                        }
+                        tokenValue.value.token?.access_token?.let {
+                            provider.saveTokenAndTime(currentDate.toInt(),
+                                it
+                            )
+                        }
+
+                    }
+                    MainScreen()
+                    if(isFirstLaunch.value) WelcomeScreen{scope.launch{provider.saveInfo(false)}}
+
+
+
+                    val token = provider.getToken.collectAsState(initial = true).value
+                    println(token)
+
+
                 }
             }
         }
@@ -80,41 +109,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen( modifier: Modifier = Modifier) {
-
+    Box(modifier = modifier
+        .fillMaxSize()
+        .background(MaterialTheme.colorScheme.background))
 }
 
 
-class DataStoreProvider(private val context : Context){
-    companion object{
-        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("settings")
-        private val first_launch = booleanPreferencesKey("isFirstLaunch")
-        private val tokenDateOfGet = stringPreferencesKey("tokenDate")
-        private val token = stringPreferencesKey("token")
-    }
-
-    val getInfo : Flow<Boolean> = context.dataStore.data.map {
-        it[first_launch] ?: true
-    }
-    val getTokenDate : Flow<String> = context.dataStore.data.map {
-        it[tokenDateOfGet] ?: "aaa" // ToDO Change it
-    }
-    val getToken : Flow<String> = context.dataStore.data.map{
-        it[token] ?: "aaa"// ToDO Change it
-    }
-
-    suspend fun saveInfo(value : Boolean){
-        context.dataStore.edit {
-            it[first_launch] = value
-        }
-    }
-
-    suspend fun saveTokenAndTime(time : String, tokenValue: String){
-        context.dataStore.edit {
-            it[tokenDateOfGet] = time
-            it[token] = tokenValue
-        }
-    }
-}
 
 
 

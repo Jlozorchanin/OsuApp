@@ -14,7 +14,7 @@ class AuthVM : ViewModel() {
         viewModelScope.launch {
             try {
                 _tokenState.value.token = service.getApiKey()
-                println(_tokenState.value.token)
+                println(_tokenState.value.token!!.access_token)
             }
             catch (e: Exception){
                 println(e.localizedMessage)
