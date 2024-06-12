@@ -23,7 +23,7 @@ class DataStoreProvider(private val context : Context){
         it[first_launch] ?: true
     }
     val getTokenDate : Flow<Int> = context.dataStore.data.map {
-        it[tokenDateOfGet] ?: 1718000000 // ToDO Change it
+        it[tokenDateOfGet] ?: 1718000000
     }
     val getToken : Flow<String> = context.dataStore.data.map{
         it[token] ?: "aaa"// ToDO Change it

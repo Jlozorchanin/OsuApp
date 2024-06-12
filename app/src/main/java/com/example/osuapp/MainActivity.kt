@@ -1,6 +1,5 @@
 package com.example.osuapp
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -22,39 +21,27 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
+import com.example.osuapp.api.ApiVM
 import com.example.osuapp.api.AuthUser
-import com.example.osuapp.api.AuthVM
 import com.example.osuapp.screens.WelcomeScreen
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import okhttp3.internal.notifyAll
-import java.text.SimpleDateFormat
-import java.time.Clock
 
 class MainActivity : ComponentActivity() {
-    private val authVM by viewModels<AuthVM>()
+    private val apiVM by viewModels<ApiVM>()
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -69,32 +56,53 @@ class MainActivity : ComponentActivity() {
                     val provider = DataStoreProvider(LocalContext.current)
                     val currentDate = System.currentTimeMillis()/1000
                     val scope = rememberCoroutineScope()
-                    val tokenValue = authVM.tokenState.collectAsState()
-                    val isFirstLaunch = remember {
-                        mutableStateOf(false)
+                    val tokenValue = apiVM.tokenState.collectAsState()
+                    val mainState = apiVM.userDataState.collectAsState()
+                    var isFirstLaunch by remember {
+                        mutableStateOf(true)
                     }
+                    var token by remember{
+                        mutableStateOf(tokenValue.value.token?.access_token)
+                    }
+                    
                     LaunchedEffect(key1 = true) {
-                        provider.getInfo.collect{
-                            isFirstLaunch.value = it
-                        }
+                        isFirstLaunch = provider.getInfo.first()
+                        delay(1000)
                         val tokenTime = provider.getTokenDate.first()
-                        if ((currentDate.toInt() - tokenTime.toString().toInt()) > 86000 ){
-                            authVM.authUser()
+                        println(tokenTime)
+                        println(currentDate.toInt())
+                        if (currentDate.toInt() - tokenTime.toString().toInt() > 86000 ){
+                            val tokenData = apiVM.authUser()
+                            println(tokenData)
+                            provider.saveTokenAndTime(currentDate.toInt(),tokenData)
                         }
-                        tokenValue.value.token?.access_token?.let {
-                            provider.saveTokenAndTime(currentDate.toInt(),
-                                it
-                            )
-                        }
+                        token = provider.getToken.first()
+
+                        delay(1000)
+                        apiVM.updateTokenInfo(AuthUser(
+                            access_token = token?: "",
+                            expires_in = currentDate.toInt() - tokenTime.toString().toInt(),
+                            token_type = ""
+                        ))
+
+
+
 
                     }
-                    MainScreen()
-                    if(isFirstLaunch.value) WelcomeScreen{scope.launch{provider.saveInfo(false)}}
 
+                    MainScreen(modifier = Modifier,
+                        mainState.value.data?.avatar_url ?: ""
+                    ){
+                        println(apiVM.tokenState.value.token)
+                        tokenValue.value.token?.let { apiVM.getBaseData(it.access_token,"29269502") }
 
+                    }
+                    if(isFirstLaunch) WelcomeScreen{
+                        scope.launch{provider.saveInfo(false)
+                        }
+                        isFirstLaunch = false
 
-                    val token = provider.getToken.collectAsState(initial = true).value
-                    println(token)
+                    }
 
 
                 }
@@ -108,10 +116,25 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MainScreen( modifier: Modifier = Modifier) {
+fun MainScreen( modifier: Modifier = Modifier,image:String?, loadImage : () -> Unit) {
     Box(modifier = modifier
         .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background))
+        .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center){
+        Column(modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+
+            AsyncImage(image,"",modifier = Modifier
+                .padding(16.dp)
+                .size(150.dp)
+                .clip(RoundedCornerShape(16.dp)))
+            Button(onClick = { loadImage() }) {
+                Text(text = "Load profile image")
+            }
+        }
+
+    }
 }
 
 
