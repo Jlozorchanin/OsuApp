@@ -20,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,19 +30,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import coil.request.ImageResult
 import com.example.compose.OsuAppTheme
 import com.example.osuapp.api.ApiVM
 import com.example.osuapp.api.AuthUser
+import com.example.osuapp.api.UserDataState
 import com.example.osuapp.screens.WelcomeScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val apiVM by viewModels<ApiVM>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -52,51 +58,49 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OsuAppTheme(darkTheme = true) {
+                val apiVM by viewModels<ApiVM>()
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
                     val currentDate = System.currentTimeMillis()/1000
                     val scope = rememberCoroutineScope()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val mainState = apiVM.userDataState.collectAsState()
+                    var image by remember {
+                        mutableStateOf(mainState.value)
+                    }
                     var isFirstLaunch by remember {
                         mutableStateOf(true)
                     }
                     var token by remember{
-                        mutableStateOf(tokenValue.value.token?.access_token)
+                        mutableStateOf("")
                     }
                     
                     LaunchedEffect(key1 = true) {
                         isFirstLaunch = provider.getInfo.first()
-                        delay(1000)
                         val tokenTime = provider.getTokenDate.first()
-                        println(tokenTime)
-                        println(currentDate.toInt())
+
                         if (currentDate.toInt() - tokenTime.toString().toInt() > 86000 ){
-                            val tokenData = apiVM.authUser()
-                            println(tokenData)
-                            provider.saveTokenAndTime(currentDate.toInt(),tokenData)
+                            apiVM.authUser{
+                                scope.launch {
+                                    provider.saveTokenAndTime(currentDate.toInt(),it.access_token)
+                                    println("test1")
+                                }
+
+                            }
+
+
                         }
                         token = provider.getToken.first()
-
-                        delay(1000)
                         apiVM.updateTokenInfo(AuthUser(
                             access_token = token?: "",
                             expires_in = currentDate.toInt() - tokenTime.toString().toInt(),
                             token_type = ""
                         ))
-
-
-
+                        apiVM.getBaseData(token,"29269502")
 
                     }
 
-                    MainScreen(modifier = Modifier,
-                        mainState.value.data?.avatar_url ?: ""
-                    ){
-                        println(apiVM.tokenState.value.token)
-                        tokenValue.value.token?.let { apiVM.getBaseData(it.access_token,"29269502") }
-
-                    }
+                    MainScreen(modifier = Modifier,image = image.data?.avatar_url)
                     if(isFirstLaunch) WelcomeScreen{
                         scope.launch{provider.saveInfo(false)
                         }
@@ -116,26 +120,22 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MainScreen( modifier: Modifier = Modifier,image:String?, loadImage : () -> Unit) {
-    Box(modifier = modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center){
-        Column(modifier = Modifier.fillMaxSize(),
+fun MainScreen(modifier: Modifier = Modifier,image : String?) {
+
+        Column(modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally) {
 
-            AsyncImage(image,"",modifier = Modifier
-                .padding(16.dp)
-                .size(150.dp)
-                .clip(RoundedCornerShape(16.dp)))
-            Button(onClick = { loadImage() }) {
-                Text(text = "Load profile image")
-            }
+            AsyncImage(
+                image,"",modifier = Modifier
+//                        state.value.data?.avatar_url,"",modifier = Modifier
+                    .padding(16.dp)
+                    .size(150.dp)
+                    .clip(RoundedCornerShape(16.dp)))
+
         }
 
     }
-}
 
 
 
