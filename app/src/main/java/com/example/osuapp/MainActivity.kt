@@ -65,42 +65,38 @@ class MainActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val mainState = apiVM.userDataState.collectAsState()
-                    var image by remember {
-                        mutableStateOf(mainState.value)
-                    }
                     var isFirstLaunch by remember {
                         mutableStateOf(true)
                     }
-                    var token by remember{
-                        mutableStateOf("")
-                    }
-                    
+
                     LaunchedEffect(key1 = true) {
                         isFirstLaunch = provider.getInfo.first()
                         val tokenTime = provider.getTokenDate.first()
-
                         if (currentDate.toInt() - tokenTime.toString().toInt() > 86000 ){
                             apiVM.authUser{
                                 scope.launch {
-                                    provider.saveTokenAndTime(currentDate.toInt(),it.access_token)
-                                    println("test1")
+                                    provider.saveTokenAndTime(currentDate.toInt(),it.access_token).also {
+                                        tokenValue.value.token?.access_token = provider.getToken.first().also {
+                                            apiVM.getBaseData("29269502")
+                                        }
+                                    }
                                 }
 
                             }
 
-
                         }
-                        token = provider.getToken.first()
-                        apiVM.updateTokenInfo(AuthUser(
-                            access_token = token?: "",
-                            expires_in = currentDate.toInt() - tokenTime.toString().toInt(),
-                            token_type = ""
-                        ))
-                        apiVM.getBaseData(token,"29269502")
+                        else{
+                            scope.launch {
+                                apiVM.updateTokenValue(provider.getToken.first()).also {
+                                    apiVM.getBaseData("29269502")
+                                }
+                            }
+                        }
+
 
                     }
 
-                    MainScreen(modifier = Modifier,image = image.data?.avatar_url)
+                    MainScreen(modifier = Modifier,mainState)
                     if(isFirstLaunch) WelcomeScreen{
                         scope.launch{provider.saveInfo(false)
                         }
@@ -120,22 +116,27 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MainScreen(modifier: Modifier = Modifier,image : String?) {
+fun MainScreen(modifier: Modifier = Modifier, state: State<UserDataState>) {
 
         Column(modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally) {
 
             AsyncImage(
-                image,"",modifier = Modifier
+                state.value.data?.avatar_url,
+                "",
+                modifier = Modifier
 //                        state.value.data?.avatar_url,"",modifier = Modifier
                     .padding(16.dp)
                     .size(150.dp)
                     .clip(RoundedCornerShape(16.dp)))
 
+            
+            Text(text = state.value.data?.username ?: "")
         }
+    
 
-    }
+}
 
 
 
