@@ -11,12 +11,10 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface UserApi {
-    @GET("users/{user_id}/osu")
+    @GET("me/osu")
     suspend fun getBaseData(
         @Header("Authorization") body: String,
-        @Path("user_id") userId : String =  "",
         @Header("Content-Type") type: String = "application/json",
-        @Query("key") key : String = "officiis",
         ): UserData
     companion object{
         var apiService : UserApi? = null

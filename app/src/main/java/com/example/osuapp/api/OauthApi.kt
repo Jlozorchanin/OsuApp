@@ -7,18 +7,33 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface OauthApi {
     @POST("token/")
     suspend fun getApiKey(
+
         @Body body : Map<String,String> = mapOf(
             "client_id" to Details().cliend_id,
             "client_secret" to Details().client_secret,
-            "grant_type" to "client_credentials",
-            "scope" to "public"
+            "grant_type" to "authorization_code"
+//            "redirect_uri" to ""  ToDo если будет скучно, то попробуй сделать навигацию после запросов через ссылки.
         ),
 
     ) : AuthUser
+
+    @POST("token")
+    suspend fun refreshApiKey(
+
+        @Body body : Map<String,String> = mapOf(
+            "client_id" to Details().cliend_id,
+            "client_secret" to Details().client_secret,
+            "grant_type" to "refresh_token",
+
+//            "redirect_uri" to ""  ToDo если будет скучно, то попробуй сделать навигацию после запросов через ссылки.
+        ),
+
+        ) : AuthUser
     companion object{
         var apiService : OauthApi? = null
         fun getInstance() : OauthApi{

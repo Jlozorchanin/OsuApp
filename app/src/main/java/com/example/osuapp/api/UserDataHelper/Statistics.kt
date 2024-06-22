@@ -18,7 +18,7 @@ data class Statistics(
     val pp: Double,
     val pp_exp: Int,
     val rank: Rank,
-    val ranked_score: Int,
+    val ranked_score: Long,
     val replays_watched_by_others: Int,
     val total_hits: Int,
     val total_score: Long

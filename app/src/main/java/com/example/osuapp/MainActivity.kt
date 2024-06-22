@@ -1,32 +1,25 @@
 package com.example.osuapp
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,7 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -45,26 +37,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
-import coil.request.ImageResult
 import com.example.compose.OsuAppTheme
 import com.example.osuapp.api.ApiVM
-import com.example.osuapp.api.AuthUser
 import com.example.osuapp.api.UserDataState
 import com.example.osuapp.screens.WelcomeScreen
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
 
@@ -76,48 +61,31 @@ class MainActivity : ComponentActivity() {
             SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
 
-
         setContent {
             OsuAppTheme(darkTheme = true) {
                 val apiVM by viewModels<ApiVM>()
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
-                    val currentDate = System.currentTimeMillis()/1000
                     val scope = rememberCoroutineScope()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val mainState = apiVM.userDataState.collectAsState()
-                    var isFirstLaunch by remember {
+                    var codeValue by remember {
+                        mutableStateOf("")
+                    }
+                    var isTokenMissing by remember {
                         mutableStateOf(true)
+                    }
+                    if(intent.action == Intent.ACTION_VIEW && intent.data?.host == "clovertestcode.online"){
+                        codeValue = intent.data?.getQueryParameter("code")?: ""
+                        isTokenMissing = false
+                        println(codeValue)
+                        runBlocking {  provider.saveInfo(false)}
                     }
 
                     LaunchedEffect(key1 = true) {
-                        isFirstLaunch = provider.getInfo.first()
-                        val tokenTime = provider.getTokenDate.first()
-                        if (currentDate.toInt() - tokenTime.toString().toInt() > 86000 ){
-                            apiVM.authUser{
-                                scope.launch {
-                                    provider.saveTokenAndTime(currentDate.toInt(),it.access_token).also {
-                                        tokenValue.value.token?.access_token = provider.getToken.first().also {
-                                            apiVM.getBaseData("29269502")
-
-
-                                        }
-                                    }
-                                }
-
-                            }
-
-                        }
-                        else{
-                            scope.launch {
-                                apiVM.updateTokenValue(provider.getToken.first()).also {
-                                    apiVM.getBaseData("29269502")
-                                }
-                            }
-                        }
-
-
+                        isTokenMissing = provider.getInfo.first()
                     }
+
 
                     Scaffold(
                         topBar = {
@@ -155,15 +123,61 @@ class MainActivity : ComponentActivity() {
                             )
                         },
                         content = { innerPadding ->
-                        MainScreen(modifier = Modifier.padding(innerPadding), state = mainState)
+                            if (!isTokenMissing) {
+                                MainScreen(
+                                    modifier = Modifier.padding(innerPadding),
+                                    state = mainState,
+                                    provider = provider,
+                                    getToken = {
+                                        if (codeValue == ""){
+                                            isTokenMissing = true
+                                        }
+                                        else {
+                                            apiVM.getTokenFromCode(codeValue){
+                                                scope.launch {
+                                                    provider.saveBaseData(
+                                                        time = (System.currentTimeMillis()/1000).toInt(),
+                                                        tokenValue = it.access_token,
+                                                        refreshTokenValue = it.refresh_token
+                                                    ).also {
+                                                        println(tokenValue.value.token?.access_token ?: "no token")
+                                                    }
+                                                }
+                                            }
+
+                                        }
+
+                                    },
+                                    refreshToken = {
+                                        apiVM.updateTokenValue(it){
+                                            scope.launch {
+                                                provider.saveBaseData(
+                                                    time = (System.currentTimeMillis()/1000).toInt(),
+                                                    tokenValue = it.access_token,
+                                                    refreshTokenValue = it.refresh_token
+                                                ).also {
+                                                    println(tokenValue.value.token?.refresh_token ?: "no ref token")
+                                                }
+                                            }
+                                        }
+                                    },
+                                    refreshVMValue = { token, refresh ->
+                                        apiVM.updateDataFromDataStore(token,refresh)
+                                    },
+                                    getData = {
+                                        apiVM.getBaseData().also {
+                                            println(tokenValue.value.token?.access_token ?: "no token")
+                                        }
+                                    }
+                                )
+                            }
+
                         }
                     )
-
-                    if(isFirstLaunch) WelcomeScreen{
-                        scope.launch{provider.saveInfo(false)
-                        }
-                        isFirstLaunch = false
-
+                    if(isTokenMissing) WelcomeScreen{
+                        val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        i.data = Uri.fromParts("package", packageName, null)
+                        startActivity(i)
                     }
 
 
@@ -172,15 +186,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
 }
 
-
-
 @Composable
-fun MainScreen(modifier: Modifier = Modifier, state: State<UserDataState>) {
+fun MainScreen(
+    modifier: Modifier = Modifier,
+    state: State<UserDataState>,
+    provider: DataStoreProvider,
+    getToken : () -> Unit,
+    refreshToken : (String) -> Unit,
+    getData : () -> Unit,
+    refreshVMValue : (token : String, refreshToken : String) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(key1 = true) {
+        val tokenTime = provider.getTokenTime.first()
+        val systemTime = System.currentTimeMillis()/1000
+        val tokenValue = provider.getToken.first()
+        val refreshTokenValue = provider.getRefreshToken.first()
+        if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue == ""){
+            getToken()
+            getData()
 
-    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)){
+        }
+        else if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue != ""){
+            refreshToken(refreshTokenValue)
+            getData()
+        }
+        else {
+            refreshVMValue(tokenValue,refreshTokenValue)
+            getData()
+        }
+
 
     }
     

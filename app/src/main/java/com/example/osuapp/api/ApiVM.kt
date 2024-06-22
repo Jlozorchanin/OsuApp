@@ -15,11 +15,55 @@ class ApiVM : ViewModel() {
 
     private val _userDataState : MutableStateFlow<UserDataState> = MutableStateFlow(UserDataState())
     val userDataState : StateFlow<UserDataState> = _userDataState.asStateFlow()
-    fun authUser(saveData : (AuthUser) -> Unit) {
+
+
+    fun getTokenFromCode(code: String, saveData: (AuthUser) -> Unit){
         val service = OauthApi.getInstance()
         viewModelScope.launch {
             try {
-                _tokenState.value = _tokenState.value.copy(token = service.getApiKey())
+                _tokenState.value = _tokenState.value.copy(token = service.getApiKey(
+                    mapOf(
+                        "client_id" to Details().cliend_id,
+                        "client_secret" to Details().client_secret,
+                        "grant_type" to "authorization_code",
+                        "code" to code,
+                        "redirect_uri" to "https://clovertestcode.online/osuapp"
+                    )
+                ))
+                saveData(_tokenState.value.token!!)
+
+            } catch (e: Exception) {
+                println(e.localizedMessage)
+            }
+        }
+    }
+
+    fun updateDataFromDataStore(
+        tokenValue : String,
+        refreshTokenValue : String
+    ){
+        _tokenState.value = _tokenState.value.copy(
+            token = AuthUser(
+                access_token = tokenValue,
+                expires_in = 86400,
+                token_type = "meow",
+                refresh_token = refreshTokenValue
+            )
+        )
+    }
+
+    fun updateTokenValue(refreshToken : String, saveData: (AuthUser) -> Unit){
+        val service = OauthApi.getInstance()
+        viewModelScope.launch {
+            try {
+                _tokenState.value = _tokenState.value.copy(token = service.refreshApiKey(
+                    mapOf(
+                        "refresh_token" to refreshToken,
+                        "client_id" to Details().cliend_id,
+                        "client_secret" to Details().client_secret,
+                        "grant_type" to "refresh_token"
+                    )
+                ))
                 saveData(_tokenState.value.token!!)
 
             } catch (e: Exception) {
@@ -30,18 +74,15 @@ class ApiVM : ViewModel() {
 
     }
 
-    fun updateTokenValue(token : String){
-        _tokenState.value = _tokenState.value.copy(token = AuthUser(access_token = token,1,"")) // ToDo fix expires_in
-    }
 
-    fun getBaseData(userId: String){
+    fun getBaseData(){
         val userService = UserApi.getInstance()
 
         viewModelScope.launch {
             if (_tokenState.value.token?.access_token != ""){
                 for (i in 5..10){
                     try {
-                        _userDataState.value = _userDataState.value.copy(data = userService.getBaseData("Bearer ${tokenState.value.token!!.access_token}", userId = userId))
+                        _userDataState.value = _userDataState.value.copy(data = userService.getBaseData("Bearer ${tokenState.value.token!!.access_token}"))
                         break
                     } catch (e: Exception) {
                         println(e.localizedMessage)
@@ -51,6 +92,7 @@ class ApiVM : ViewModel() {
                 }
 
             }
+            else println("нет токена, чтоб сделать запрос") //ToDo write smth normal
 
 
         }
