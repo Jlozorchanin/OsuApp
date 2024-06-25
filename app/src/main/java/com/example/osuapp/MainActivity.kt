@@ -12,11 +12,16 @@ import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -24,7 +29,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,16 +41,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
 import com.example.osuapp.api.ApiVM
-import com.example.osuapp.api.UserDataState
-import com.example.osuapp.screens.WelcomeScreen
+import com.example.osuapp.api.ReqDataState
+import com.example.osuapp.api.news.NewsPost
+import com.example.osuapp.components.NewsItem
+import com.example.osuapp.components.WelcomeScreen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -68,7 +80,8 @@ class MainActivity : ComponentActivity() {
                     val provider = DataStoreProvider(LocalContext.current)
                     val scope = rememberCoroutineScope()
                     val tokenValue = apiVM.tokenState.collectAsState()
-                    val mainState = apiVM.userDataState.collectAsState()
+                    val requestsDataState = apiVM.requestsState.collectAsState()
+                    val userState = apiVM.userDataState.collectAsState()
                     var codeValue by remember {
                         mutableStateOf("")
                     }
@@ -86,14 +99,13 @@ class MainActivity : ComponentActivity() {
                         isTokenMissing = provider.getInfo.first()
                     }
 
-
                     Scaffold(
                         topBar = {
                             CenterAlignedTopAppBar(title = {
-                                AnimatedVisibility(visible = mainState.value.data?.username != null,
+                                AnimatedVisibility(visible = userState.value.data?.username != null,
                                     enter = fadeIn(tween(200))) {
 
-                                    Text(text = mainState.value.data?.username ?: "", maxLines = 1, overflow = TextOverflow.Clip)
+                                    Text(text = userState.value.data?.username ?: "", maxLines = 1, overflow = TextOverflow.Clip)
                                 }
                             },
 
@@ -106,7 +118,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 actions = {
-                                    AnimatedVisibility(visible = mainState.value.data?.avatar_url != null,
+                                    AnimatedVisibility(visible = userState.value.data?.avatar_url != null,
                                         enter = fadeIn(tween(200))
                                     ){
                                         AsyncImage(
@@ -114,7 +126,7 @@ class MainActivity : ComponentActivity() {
                                                 .padding(end = 12.dp)
                                                 .clip(RoundedCornerShape(50.dp))
                                                 .size(55.dp),
-                                            model = mainState.value.data?.avatar_url ?: "",
+                                            model = userState.value.data?.avatar_url ?: "",
                                             contentDescription = null
                                         )
                                     }
@@ -126,7 +138,7 @@ class MainActivity : ComponentActivity() {
                             if (!isTokenMissing) {
                                 MainScreen(
                                     modifier = Modifier.padding(innerPadding),
-                                    state = mainState,
+                                    reqState = requestsDataState,
                                     provider = provider,
                                     getToken = {
                                         if (codeValue == ""){
@@ -180,7 +192,6 @@ class MainActivity : ComponentActivity() {
                         startActivity(i)
                     }
 
-
                 }
             }
         }
@@ -191,14 +202,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
-    state: State<UserDataState>,
+    reqState: State<ReqDataState>,
     provider: DataStoreProvider,
     getToken : () -> Unit,
     refreshToken : (String) -> Unit,
     getData : () -> Unit,
     refreshVMValue : (token : String, refreshToken : String) -> Unit
 ) {
+    val localWidth = LocalConfiguration.current
     val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+    val lazyColumnState = rememberLazyListState()
     LaunchedEffect(key1 = true) {
         val tokenTime = provider.getTokenTime.first()
         val systemTime = System.currentTimeMillis()/1000
@@ -217,7 +231,39 @@ fun MainScreen(
             refreshVMValue(tokenValue,refreshTokenValue)
             getData()
         }
+    }
 
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+        if (reqState.value.news?.news_posts != null){
+            LazyColumn(
+                state = lazyColumnState,
+                modifier = Modifier.fillMaxSize(),
+
+            ) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        contentAlignment = Alignment.TopStart
+                    ){
+                        Text(
+                            text= "Недавние новости",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 26.sp,
+                            modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
+                        )
+
+                    }
+                }
+                items(reqState.value.news?.news_posts!!){post ->
+                    NewsItem(post = post){
+                        uriHandler.openUri("https://osu.ppy.sh/home/news/$it")
+                    }
+                }
+
+            }
+        }
 
     }
     

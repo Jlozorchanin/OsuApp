@@ -2,6 +2,7 @@ package com.example.osuapp.api
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.osuapp.api.news.NewsData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,9 +14,24 @@ class ApiVM : ViewModel() {
     private val _tokenState: MutableStateFlow<TokenState> = MutableStateFlow(TokenState())
     val tokenState: StateFlow<TokenState> = _tokenState.asStateFlow()
 
+    private val _requestsState : MutableStateFlow<ReqDataState> = MutableStateFlow(ReqDataState())
+    val requestsState : StateFlow<ReqDataState> = _requestsState.asStateFlow()
+
     private val _userDataState : MutableStateFlow<UserDataState> = MutableStateFlow(UserDataState())
     val userDataState : StateFlow<UserDataState> = _userDataState.asStateFlow()
 
+
+    init { // put here methods that does not require token
+        val service = MainApi.getInstance()
+        viewModelScope.launch {
+            try {
+                _requestsState.value = _requestsState.value.copy(news = service.getNews())
+            }
+            catch (e:Exception){
+                println(e.localizedMessage)
+            }
+        }
+    }
 
     fun getTokenFromCode(code: String, saveData: (AuthUser) -> Unit){
         val service = OauthApi.getInstance()
@@ -76,7 +92,7 @@ class ApiVM : ViewModel() {
 
 
     fun getBaseData(){
-        val userService = UserApi.getInstance()
+        val userService = MainApi.getInstance()
 
         viewModelScope.launch {
             if (_tokenState.value.token?.access_token != ""){
@@ -102,3 +118,5 @@ class ApiVM : ViewModel() {
 data class TokenState(var token: AuthUser? = null)
 
 data class UserDataState(var data : UserData? = null)
+
+data class ReqDataState(var news : NewsData? = null)
