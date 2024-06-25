@@ -35,7 +35,7 @@ interface MainApi {
 
     @GET("news")
     suspend fun getNews(
-        @Query("limit") limit : Int = 21, // 21 - max
+        @Query("limit") limit : Int = 20, // 21 - max
         @Header("Content-Type") type: String = "application/json"
     ) : NewsData
 

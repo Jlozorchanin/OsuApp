@@ -20,6 +20,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -212,7 +217,7 @@ fun MainScreen(
     val localWidth = LocalConfiguration.current
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
-    val lazyColumnState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
     LaunchedEffect(key1 = true) {
         val tokenTime = provider.getTokenTime.first()
         val systemTime = System.currentTimeMillis()/1000
@@ -234,29 +239,31 @@ fun MainScreen(
     }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+        println(localWidth.screenWidthDp.dp)
         if (reqState.value.news?.news_posts != null){
-            LazyColumn(
-                state = lazyColumnState,
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(500.dp),
+                state = lazyGridState,
                 modifier = Modifier.fillMaxSize(),
 
             ) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp),
-                        contentAlignment = Alignment.TopStart
-                    ){
-                        Text(
-                            text= "Недавние новости",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 26.sp,
-                            modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
-                        )
-
-                    }
-                }
-                items(reqState.value.news?.news_posts!!){post ->
+//                item {
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .height(60.dp),
+//                        contentAlignment = Alignment.TopStart
+//                    ){
+//                        Text(
+//                            text= "Недавние новости",
+//                            fontWeight = FontWeight.SemiBold,
+//                            fontSize = 26.sp,
+//                            modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
+//                        )
+//
+//                    }
+//                }
+                items(reqState.value.news?.news_posts!!) {post ->
                     NewsItem(post = post){
                         uriHandler.openUri("https://osu.ppy.sh/home/news/$it")
                     }

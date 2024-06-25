@@ -35,15 +35,15 @@ fun NewsItem(modifier: Modifier = Modifier,post: NewsPost,onClick : (String) -> 
     val localWidth = LocalConfiguration.current
     Box(modifier = modifier
 
-        .fillMaxWidth()
+
         .padding(
             bottom = localWidth.screenHeightDp.dp / 40,
             start = localWidth.screenWidthDp.dp / 42,
             end = localWidth.screenWidthDp.dp / 45,
         )
         .wrapContentWidth(Alignment.Start)
-        .widthIn(300.dp, 900.dp)
-        .heightIn(140.dp, 200.dp))
+        .fillMaxWidth()
+        .heightIn(140.dp, 240.dp))
     {
         AsyncImage(
             modifier = Modifier
