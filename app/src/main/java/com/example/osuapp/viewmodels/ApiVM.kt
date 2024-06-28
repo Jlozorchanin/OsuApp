@@ -1,14 +1,18 @@
-package com.example.osuapp.api
+package com.example.osuapp.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.osuapp.api.AuthUser
+import com.example.osuapp.api.Details
+import com.example.osuapp.api.MainApi
+import com.example.osuapp.api.OauthApi
+import com.example.osuapp.api.UserData
 import com.example.osuapp.api.news.NewsData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.internal.wait
 
 class ApiVM : ViewModel() {
     private val _tokenState: MutableStateFlow<TokenState> = MutableStateFlow(TokenState())
@@ -21,7 +25,7 @@ class ApiVM : ViewModel() {
     val userDataState : StateFlow<UserDataState> = _userDataState.asStateFlow()
 
 
-    init { // put here methods that does not require token
+    init { // put here calls that do not require token
         val service = MainApi.getInstance()
         viewModelScope.launch {
             try {
@@ -85,15 +89,12 @@ class ApiVM : ViewModel() {
             } catch (e: Exception) {
                 println(e.localizedMessage)
             }
-
         }
-
     }
 
 
     fun getBaseData(){
         val userService = MainApi.getInstance()
-
         viewModelScope.launch {
             if (_tokenState.value.token?.access_token != ""){
                 for (i in 5..10){
@@ -106,13 +107,8 @@ class ApiVM : ViewModel() {
                     }
                     if (i==9) println("smt went wrong in ApiVM ")
                 }
-
             }
-            else println("нет токена, чтоб сделать запрос") //ToDo write smth normal
-
-
         }
-
     }
 }
 data class TokenState(var token: AuthUser? = null)

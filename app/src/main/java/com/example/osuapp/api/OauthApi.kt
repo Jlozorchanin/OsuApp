@@ -17,7 +17,6 @@ interface OauthApi {
             "client_id" to Details().cliend_id,
             "client_secret" to Details().client_secret,
             "grant_type" to "authorization_code"
-//            "redirect_uri" to ""  ToDo если будет скучно, то попробуй сделать навигацию после запросов через ссылки.
         ),
 
     ) : AuthUser
@@ -29,8 +28,6 @@ interface OauthApi {
             "client_id" to Details().cliend_id,
             "client_secret" to Details().client_secret,
             "grant_type" to "refresh_token",
-
-//            "redirect_uri" to ""  ToDo если будет скучно, то попробуй сделать навигацию после запросов через ссылки.
         ),
 
         ) : AuthUser

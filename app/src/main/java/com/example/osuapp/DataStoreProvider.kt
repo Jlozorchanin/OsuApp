@@ -37,11 +37,14 @@ class DataStoreProvider(private val context : Context){
 
 
 
+
     suspend fun saveInfo(value : Boolean){
         context.dataStore.edit {
             it[tokenMissing] = value
         }
     }
+
+
 
     suspend fun saveBaseData(time : Int, tokenValue: String,refreshTokenValue: String){
         context.dataStore.edit {

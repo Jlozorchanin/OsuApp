@@ -12,21 +12,17 @@ import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -37,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -49,24 +46,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
-import com.example.osuapp.api.ApiVM
-import com.example.osuapp.api.ReqDataState
-import com.example.osuapp.api.news.NewsPost
+import com.example.osuapp.viewmodels.ApiVM
+import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.components.NewsItem
+import com.example.osuapp.components.ProfileScreen
 import com.example.osuapp.components.WelcomeScreen
+import com.example.osuapp.viewmodels.Screens
+import com.example.osuapp.viewmodels.UiViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Serializer
 
 class MainActivity : ComponentActivity() {
 
@@ -81,12 +85,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             OsuAppTheme(darkTheme = true) {
                 val apiVM by viewModels<ApiVM>()
+                val uiVM by viewModels<UiViewModel>()
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
                     val scope = rememberCoroutineScope()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val requestsDataState = apiVM.requestsState.collectAsState()
                     val userState = apiVM.userDataState.collectAsState()
+                    val uiState = uiVM.uiState.collectAsState()
+                    val navController = rememberNavController()
                     var codeValue by remember {
                         mutableStateOf("")
                     }
@@ -96,7 +103,6 @@ class MainActivity : ComponentActivity() {
                     if(intent.action == Intent.ACTION_VIEW && intent.data?.host == "clovertestcode.online"){
                         codeValue = intent.data?.getQueryParameter("code")?: ""
                         isTokenMissing = false
-                        println(codeValue)
                         runBlocking {  provider.saveInfo(false)}
                     }
 
@@ -106,14 +112,14 @@ class MainActivity : ComponentActivity() {
 
                     Scaffold(
                         topBar = {
-                            CenterAlignedTopAppBar(title = {
+                            CenterAlignedTopAppBar(
+                                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                                title = {
                                 AnimatedVisibility(visible = userState.value.data?.username != null,
                                     enter = fadeIn(tween(200))) {
-
                                     Text(text = userState.value.data?.username ?: "", maxLines = 1, overflow = TextOverflow.Clip)
                                 }
                             },
-
                                 navigationIcon = {
                                     IconButton(onClick = { /*TODO*/ }) {
                                         Icon(
@@ -127,11 +133,15 @@ class MainActivity : ComponentActivity() {
                                         enter = fadeIn(tween(200))
                                     ){
                                         AsyncImage(
+
                                             modifier = Modifier
                                                 .padding(end = 12.dp)
                                                 .clip(RoundedCornerShape(50.dp))
-                                                .size(55.dp),
-                                            model = userState.value.data?.avatar_url ?: "",
+                                                .size(55.dp)
+                                                .clickable {
+                                                    uiVM.changeScreen(Screens.PROFILE)
+                                                },
+                                            model = userState.value.data?.avatar_url,
                                             contentDescription = null
                                         )
                                     }
@@ -141,68 +151,84 @@ class MainActivity : ComponentActivity() {
                         },
                         content = { innerPadding ->
                             if (!isTokenMissing) {
-                                MainScreen(
-                                    modifier = Modifier.padding(innerPadding),
-                                    reqState = requestsDataState,
-                                    provider = provider,
-                                    getToken = {
-                                        if (codeValue == ""){
-                                            isTokenMissing = true
-                                        }
-                                        else {
-                                            apiVM.getTokenFromCode(codeValue){
-                                                scope.launch {
-                                                    provider.saveBaseData(
-                                                        time = (System.currentTimeMillis()/1000).toInt(),
-                                                        tokenValue = it.access_token,
-                                                        refreshTokenValue = it.refresh_token
-                                                    ).also {
-                                                        println(tokenValue.value.token?.access_token ?: "no token")
+                                when (uiState.value.screen) {
+                                    Screens.HOME -> {
+                                        MainScreen(
+                                            modifier = Modifier.padding(innerPadding),
+                                            reqState = requestsDataState,
+                                            provider = provider,
+                                            getToken = {
+                                                if (codeValue == "") {
+                                                    isTokenMissing = true
+                                                } else {
+                                                    apiVM.getTokenFromCode(codeValue) {
+                                                        scope.launch {
+                                                            provider.saveBaseData(
+                                                                time = (System.currentTimeMillis() / 1000).toInt(),
+                                                                tokenValue = it.access_token,
+                                                                refreshTokenValue = it.refresh_token
+                                                            ).also {
+                                                                println(
+                                                                    tokenValue.value.token?.access_token ?: "no token"
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+
+                                                }
+                                            },
+                                            refreshToken = {
+                                                apiVM.updateTokenValue(it) {
+                                                    scope.launch {
+                                                        provider.saveBaseData(
+                                                            time = (System.currentTimeMillis() / 1000).toInt(),
+                                                            tokenValue = it.access_token,
+                                                            refreshTokenValue = it.refresh_token
+                                                        ).also {
+                                                            println(
+                                                                tokenValue.value.token?.refresh_token ?: "no ref token"
+                                                            )
+                                                        }
                                                     }
                                                 }
+                                            },
+                                            refreshVMValue = { token, refresh ->
+                                                apiVM.updateDataFromDataStore(token, refresh)
+                                            },
+                                            getData = {
+                                                apiVM.getBaseData()
                                             }
+                                        )
+                                    }
 
-                                        }
-
-                                    },
-                                    refreshToken = {
-                                        apiVM.updateTokenValue(it){
-                                            scope.launch {
-                                                provider.saveBaseData(
-                                                    time = (System.currentTimeMillis()/1000).toInt(),
-                                                    tokenValue = it.access_token,
-                                                    refreshTokenValue = it.refresh_token
-                                                ).also {
-                                                    println(tokenValue.value.token?.refresh_token ?: "no ref token")
-                                                }
-                                            }
-                                        }
-                                    },
-                                    refreshVMValue = { token, refresh ->
-                                        apiVM.updateDataFromDataStore(token,refresh)
-                                    },
-                                    getData = {
-                                        apiVM.getBaseData().also {
-                                            println(tokenValue.value.token?.access_token ?: "no token")
+                                    Screens.PROFILE -> {
+                                        ProfileScreen{
+                                            uiVM.changeScreen(Screens.HOME)
                                         }
                                     }
-                                )
+                                    Screens.SETTINGS -> TODO()
+                                    Screens.WELCOME -> TODO()
+                                }
+
+
+                            }
+                            else{
+                                WelcomeScreen {
+                                    val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    i.data = Uri.fromParts("package", packageName, null)
+                                    startActivity(i)
+                                }
+                            }
                             }
 
-                        }
-                    )
-                    if(isTokenMissing) WelcomeScreen{
-                        val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                        i.data = Uri.fromParts("package", packageName, null)
-                        startActivity(i)
-                    }
 
+                    )
                 }
             }
         }
     }
-
 }
+
 
 @Composable
 fun MainScreen(
@@ -215,7 +241,7 @@ fun MainScreen(
     refreshVMValue : (token : String, refreshToken : String) -> Unit
 ) {
     val localWidth = LocalConfiguration.current
-    val scope = rememberCoroutineScope()
+//    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val lazyGridState = rememberLazyGridState()
     LaunchedEffect(key1 = true) {
@@ -236,10 +262,11 @@ fun MainScreen(
             refreshVMValue(tokenValue,refreshTokenValue)
             getData()
         }
+
     }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-        println(localWidth.screenWidthDp.dp)
+
         if (reqState.value.news?.news_posts != null){
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(500.dp),
@@ -247,22 +274,25 @@ fun MainScreen(
                 modifier = Modifier.fillMaxSize(),
 
             ) {
-//                item {
-//                    Box(
-//                        modifier = Modifier
-//                            .fillMaxWidth()
-//                            .height(60.dp),
-//                        contentAlignment = Alignment.TopStart
-//                    ){
-//                        Text(
-//                            text= "Недавние новости",
-//                            fontWeight = FontWeight.SemiBold,
-//                            fontSize = 26.sp,
-//                            modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
-//                        )
-//
-//                    }
-//                }
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        contentAlignment = Alignment.TopStart
+                    ){
+                        Text(
+                            text= "Недавние новости",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 26.sp,
+                            modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
+                        )
+
+                    }
+                }
+                item {
+
+                }
                 items(reqState.value.news?.news_posts!!) {post ->
                     NewsItem(post = post){
                         uriHandler.openUri("https://osu.ppy.sh/home/news/$it")

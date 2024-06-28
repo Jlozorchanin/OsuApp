@@ -39,7 +39,7 @@ fun NewsItem(modifier: Modifier = Modifier,post: NewsPost,onClick : (String) -> 
         .padding(
             bottom = localWidth.screenHeightDp.dp / 40,
             start = localWidth.screenWidthDp.dp / 42,
-            end = localWidth.screenWidthDp.dp / 45,
+            end = localWidth.screenWidthDp.dp / 42,
         )
         .wrapContentWidth(Alignment.Start)
         .fillMaxWidth()
@@ -74,9 +74,7 @@ fun NewsItem(modifier: Modifier = Modifier,post: NewsPost,onClick : (String) -> 
                     RoundedCornerShape(28.dp)
                 )
                 .clickable {
-
                     val finalUri = post.edit_url.removeSuffix(".md").drop(54)
-                    println(finalUri)
                     onClick(finalUri)
                 },
             verticalArrangement = Arrangement.Bottom,
