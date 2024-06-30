@@ -1,0 +1,31 @@
+package com.example.osuapp.api.scores
+
+data class Beatmap(
+    val accuracy: Float,
+    val ar: Double,
+    val beatmapset_id: Int,
+    val bpm: Any,
+    val checksum: String,
+    val convert: Boolean,
+    val count_circles: Int,
+    val count_sliders: Int,
+    val count_spinners: Int,
+    val cs: Double,
+    val deleted_at: Any,
+    val difficulty_rating: Double,
+    val drain: Double,
+    val hit_length: Int,
+    val id: Int,
+    val is_scoreable: Boolean,
+    val last_updated: String,
+    val mode: String,
+    val mode_int: Int,
+    val passcount: Int,
+    val playcount: Int,
+    val ranked: Int,
+    val status: String,
+    val total_length: Int,
+    val url: String,
+    val user_id: Int,
+    val version: String
+)

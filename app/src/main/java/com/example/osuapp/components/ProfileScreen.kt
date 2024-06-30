@@ -1,13 +1,10 @@
 package com.example.osuapp.components
 
-import android.content.Context
-import android.content.res.AssetManager
-import android.icu.text.Transliterator.Position
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BasicTooltipBox
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,60 +16,44 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberBasicTooltipState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.paint
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PointMode
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
+import coil.compose.AsyncImage
 import com.example.osuapp.R
+import com.example.osuapp.api.scores.ScoreItem
+import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.viewmodels.UserDataState
-import com.google.gson.Gson
-import com.google.gson.JsonParser
-import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.internal.readJson
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import kotlin.math.round
 import kotlin.math.roundToInt
 
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState>, back : () -> Unit, ) {
+fun ProfileScreen(
+    modifier: Modifier = Modifier, userState: State<UserDataState>,
+    reqState: State<ReqDataState>, back: () -> Unit,
+) {
     val localWidth = LocalConfiguration.current
     val firstToolTipState = rememberBasicTooltipState()
     val secondToolTipState = rememberBasicTooltipState()
@@ -89,13 +70,14 @@ fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Start,
-        contentPadding = PaddingValues(vertical = 16.dp )
+        contentPadding = PaddingValues(vertical = 16.dp ),
     ) {
+
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
+                    .height(40.dp),
                 contentAlignment = Alignment.TopStart
             ){
                 Text(
@@ -107,10 +89,13 @@ fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState
 
             }
         }
+
+
         item {
             Box(modifier = Modifier
                 .padding(horizontal = localWidth.screenWidthDp.dp / 30, vertical = 16.dp)
                 .fillMaxWidth()
+
                 .height(70.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer),
@@ -137,7 +122,6 @@ fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState
             }
 
         }
-
         item {
             Box(modifier = Modifier
                 .fillMaxWidth()
@@ -157,7 +141,7 @@ fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState
                     horizontalArrangement = Arrangement.Start
                 ) {
                     BasicTooltipBox(
-                        tooltip = { Text("PP - performances point") },
+                        tooltip = { Text("    PP - performances point") },
                         state = firstToolTipState,
                         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider()
                     ){
@@ -230,6 +214,32 @@ fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState
 
         }
 
+
+
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp),
+                contentAlignment = Alignment.TopStart
+            ){
+                Text(
+                    text= "Рекорды",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 26.sp,
+                    modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30, top = 16.dp)
+                )
+
+            }
+        }
+
+        items(reqState.value.userScores?: emptyList()){ score ->
+            MapItem(score = score)
+        }
+        
+        
+
+
     }
 
 
@@ -237,6 +247,96 @@ fun ProfileScreen(modifier: Modifier = Modifier, userState : State<UserDataState
 
     
 
+}
+
+@Composable
+fun MapItem(modifier: Modifier = Modifier,score : ScoreItem) {
+    val uriHandler = LocalUriHandler.current
+    Box(modifier = modifier
+        .fillMaxWidth()
+        .padding(
+            start = LocalConfiguration.current.screenWidthDp.dp / 30,
+            end = LocalConfiguration.current.screenWidthDp.dp / 30,
+            bottom = 20.dp
+        )
+        .height(160.dp)
+        .clip(RoundedCornerShape(16.dp))
+        ,
+
+        contentAlignment = Alignment.CenterStart)
+    {
+
+        AsyncImage(modifier = Modifier.fillMaxSize(),model = score.beatmapset.covers.cardT, contentScale = ContentScale.Crop, contentDescription = null)
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .clickable {
+                uriHandler.openUri("https://osu.ppy.sh/beatmapsets/${score.beatmapset.id}/#${score.beatmap.mode}/${score.beatmap.id}")
+            }
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(Color.Transparent, Color.Black.copy(.5f)),
+                    startY = 0f,
+                    endY = 0f
+                )
+            ))
+        Column(
+            modifier
+                .fillMaxSize()
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp)),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.Start)
+        {
+            Text(modifier = Modifier.padding(start = 14.dp,end = 8.dp),
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                text = score.beatmapset.title + " от " + score.beatmapset.artist,
+                maxLines = 1,
+                fontWeight = FontWeight.SemiBold,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(modifier = Modifier.padding(start = 14.dp, bottom = 8.dp, end = 8.dp),
+                fontSize = 14.sp,
+                lineHeight = 14.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                text = score.beatmap.version,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,)
+
+        }
+
+        Column(
+            modifier
+                .fillMaxSize()
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp)),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.Start)
+        {
+            Text(modifier = Modifier.padding(start = 14.dp,end = 8.dp,top=10.dp),
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+
+                text = "PP: " + score.pp.roundToInt().toString() + "   ACC: ${"%1.1f".format(score.accuracy*100)}%",
+                maxLines = 1,
+                fontWeight = FontWeight.SemiBold,
+                overflow = TextOverflow.Ellipsis
+            )
+
+
+        }
+
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd){
+            Text(modifier = Modifier.padding(end = 14.dp),
+                fontSize = 50.sp,
+                lineHeight = 14.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                text = score.rank,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,)
+        }
+
+    }
 }
 
 

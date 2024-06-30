@@ -1,12 +1,15 @@
 package com.example.osuapp.api
 
 import com.example.osuapp.api.news.NewsData
+import com.example.osuapp.api.scores.Beatmap
+import com.example.osuapp.api.scores.Scores
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface MainApi {
@@ -15,6 +18,25 @@ interface MainApi {
         @Header("Authorization") body: String,
         @Header("Content-Type") type: String = "application/json",
         ): UserData
+
+
+    @GET("users/{id}/scores/{type}")
+    suspend fun getUserScores(
+        @Path("id") id : Int,
+        @Path("type") type : String = "best",  // firsts, recent
+        @Query("mode") mode : String = "osu",
+        @Query("limit") limit : Int = 12,
+        @Header("Authorization") body: String,
+    ) : Scores
+
+
+    @GET("news")
+    suspend fun getNews(
+        @Query("limit") limit : Int = 20, // 21 - max
+        @Header("Content-Type") type: String = "application/json"
+    ) : NewsData
+
+
     companion object{
         var apiService : MainApi? = null
         fun getInstance() : MainApi {
@@ -33,10 +55,6 @@ interface MainApi {
         }
     }
 
-    @GET("news")
-    suspend fun getNews(
-        @Query("limit") limit : Int = 20, // 21 - max
-        @Header("Content-Type") type: String = "application/json"
-    ) : NewsData
+
 
 }

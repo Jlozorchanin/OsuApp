@@ -54,9 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
 import com.example.osuapp.viewmodels.ApiVM
@@ -69,8 +66,6 @@ import com.example.osuapp.viewmodels.UiViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Serializer
 
 class MainActivity : ComponentActivity() {
 
@@ -93,7 +88,6 @@ class MainActivity : ComponentActivity() {
                     val requestsDataState = apiVM.requestsState.collectAsState()
                     val userState = apiVM.userDataState.collectAsState()
                     val uiState = uiVM.uiState.collectAsState()
-                    val navController = rememberNavController()
                     var codeValue by remember {
                         mutableStateOf("")
                     }
@@ -109,6 +103,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(key1 = true) {
                         isTokenMissing = provider.getInfo.first()
                     }
+
 
                     Scaffold(
                         topBar = {
@@ -197,14 +192,18 @@ class MainActivity : ComponentActivity() {
                                             },
                                             getData = {
                                                 apiVM.getBaseData()
+                                            },
+                                            getScores = {
+                                                apiVM.getScores()
                                             }
                                         )
                                     }
 
                                     Screens.PROFILE -> {
-                                        ProfileScreen(modifier = Modifier.padding(innerPadding),userState = userState){
-                                            uiVM.changeScreen(Screens.HOME)
-                                        }
+                                        ProfileScreen(
+                                            modifier = Modifier.padding(innerPadding),
+                                            userState = userState,
+                                            reqState = requestsDataState , back = {uiVM.changeScreen(Screens.HOME)})
                                     }
                                     Screens.SETTINGS -> TODO()
                                     Screens.WELCOME -> TODO()
@@ -238,12 +237,15 @@ fun MainScreen(
     getToken : () -> Unit,
     refreshToken : (String) -> Unit,
     getData : () -> Unit,
-    refreshVMValue : (token : String, refreshToken : String) -> Unit
+    refreshVMValue : (token : String, refreshToken : String) -> Unit,
+    getScores : () -> Unit
 ) {
     val localWidth = LocalConfiguration.current
 //    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val lazyGridState = rememberLazyGridState()
+
+
     LaunchedEffect(key1 = true) {
         val tokenTime = provider.getTokenTime.first()
         val systemTime = System.currentTimeMillis()/1000
@@ -262,6 +264,8 @@ fun MainScreen(
             refreshVMValue(tokenValue,refreshTokenValue)
             getData()
         }
+
+        getScores()
 
     }
 
