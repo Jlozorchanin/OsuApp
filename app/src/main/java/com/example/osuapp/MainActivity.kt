@@ -202,7 +202,7 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     Screens.PROFILE -> {
-                                        ProfileScreen{
+                                        ProfileScreen(modifier = Modifier.padding(innerPadding),userState = userState){
                                             uiVM.changeScreen(Screens.HOME)
                                         }
                                     }
