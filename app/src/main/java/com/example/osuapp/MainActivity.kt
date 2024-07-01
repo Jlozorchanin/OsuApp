@@ -2,16 +2,20 @@ package com.example.osuapp
 
 import android.content.Intent
 import android.net.Uri
+import android.opengl.Visibility
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,9 +24,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -46,16 +54,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
+import com.example.osuapp.api.friends.Friends
+import com.example.osuapp.components.Details
 import com.example.osuapp.viewmodels.ApiVM
 import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.components.NewsItem
@@ -84,6 +97,8 @@ class MainActivity : ComponentActivity() {
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
                     val scope = rememberCoroutineScope()
+                    val lazyGridState = rememberLazyGridState()
+                    val lazyColumnState = rememberLazyListState()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val requestsDataState = apiVM.requestsState.collectAsState()
                     val userState = apiVM.userDataState.collectAsState()
@@ -134,7 +149,7 @@ class MainActivity : ComponentActivity() {
                                                 .clip(RoundedCornerShape(50.dp))
                                                 .size(55.dp)
                                                 .clickable {
-                                                    uiVM.changeScreen(Screens.PROFILE)
+                                                    uiVM.changeScreen(Screens.PROFILE, Screens.HOME)
                                                 },
                                             model = userState.value.data?.avatar_url,
                                             contentDescription = null
@@ -146,17 +161,44 @@ class MainActivity : ComponentActivity() {
                         },
                         content = { innerPadding ->
                             if (!isTokenMissing) {
-                                when (uiState.value.screen) {
-                                    Screens.HOME -> {
-                                        MainScreen(
-                                            modifier = Modifier.padding(innerPadding),
-                                            reqState = requestsDataState,
-                                            provider = provider,
-                                            getToken = {
-                                                if (codeValue == "") {
-                                                    isTokenMissing = true
-                                                } else {
-                                                    apiVM.getTokenFromCode(codeValue) {
+                                when (uiState.value.screen){
+                                    Screens.HOME ->{
+                                        AnimatedVisibility(visible = uiState.value.screen==Screens.HOME, enter = fadeIn(animationSpec = tween(200)), exit = fadeOut(
+                                            tween(300)
+                                        )) {
+                                            MainScreen(
+                                                modifier = Modifier.padding(innerPadding),
+                                                reqState = requestsDataState,
+                                                provider = provider,
+                                                lazyGridState = lazyGridState,
+                                                back = {
+                                                    if (uiVM.uiState.value.recentScreen !=Screens.HOME){
+                                                        uiVM.changeScreen(uiState.value.recentScreen,Screens.HOME)
+                                                    }
+
+                                                },
+                                                getToken = {
+                                                    if (codeValue == "") {
+                                                        isTokenMissing = true
+                                                    } else {
+                                                        apiVM.getTokenFromCode(codeValue) {
+                                                            scope.launch {
+                                                                provider.saveBaseData(
+                                                                    time = (System.currentTimeMillis() / 1000).toInt(),
+                                                                    tokenValue = it.access_token,
+                                                                    refreshTokenValue = it.refresh_token
+                                                                ).also {
+                                                                    println(
+                                                                        tokenValue.value.token?.access_token ?: "no token"
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+
+                                                    }
+                                                },
+                                                refreshToken = {
+                                                    apiVM.updateTokenValue(it) {
                                                         scope.launch {
                                                             provider.saveBaseData(
                                                                 time = (System.currentTimeMillis() / 1000).toInt(),
@@ -164,51 +206,58 @@ class MainActivity : ComponentActivity() {
                                                                 refreshTokenValue = it.refresh_token
                                                             ).also {
                                                                 println(
-                                                                    tokenValue.value.token?.access_token ?: "no token"
+                                                                    tokenValue.value.token?.refresh_token ?: "no ref token"
                                                                 )
                                                             }
                                                         }
                                                     }
-
+                                                },
+                                                refreshVMValue = { token, refresh ->
+                                                    apiVM.updateDataFromDataStore(token, refresh)
+                                                },
+                                                getData = {
+                                                    apiVM.getBaseData()
+                                                },
+                                                getAddInfo = {
+                                                    apiVM.getScores()
+                                                    apiVM.getFriends()
                                                 }
-                                            },
-                                            refreshToken = {
-                                                apiVM.updateTokenValue(it) {
-                                                    scope.launch {
-                                                        provider.saveBaseData(
-                                                            time = (System.currentTimeMillis() / 1000).toInt(),
-                                                            tokenValue = it.access_token,
-                                                            refreshTokenValue = it.refresh_token
-                                                        ).also {
-                                                            println(
-                                                                tokenValue.value.token?.refresh_token ?: "no ref token"
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            refreshVMValue = { token, refresh ->
-                                                apiVM.updateDataFromDataStore(token, refresh)
-                                            },
-                                            getData = {
-                                                apiVM.getBaseData()
-                                            },
-                                            getScores = {
-                                                apiVM.getScores()
-                                            }
-                                        )
-                                    }
+                                            )
+                                        }
+                                        }
 
                                     Screens.PROFILE -> {
-                                        ProfileScreen(
-                                            modifier = Modifier.padding(innerPadding),
-                                            userState = userState,
-                                            reqState = requestsDataState , back = {uiVM.changeScreen(Screens.HOME)})
+                                        AnimatedVisibility(visible = uiState.value.screen == Screens.PROFILE, enter = fadeIn(
+                                            tween(400)
+                                        )) {
+                                            ProfileScreen(
+                                                modifier = Modifier.padding(innerPadding),
+                                                userState = userState,
+                                                lazyListState = lazyColumnState,
+                                                reqState = requestsDataState ,
+                                                back = {uiVM.changeScreen(uiState.value.recentScreen,Screens.PROFILE)},
+                                                openDetails = {
+                                                    uiVM.changeScore(it)
+                                                    uiVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.PROFILE)
+                                                }
+                                                )
+
+                                        }
+
                                     }
+
+                                    Screens.FRIENDS -> TODO()
                                     Screens.SETTINGS -> TODO()
                                     Screens.WELCOME -> TODO()
+                                    Screens.EXTRA_MAP_DETAILS -> Details(
+                                        modifier = Modifier.padding(innerPadding),
+                                        userState = userState,
+                                        reqState = requestsDataState,
+                                        score = uiState.value.score!!
+                                    ) {
+                                        uiVM.changeScreen(uiState.value.recentScreen,Screens.HOME)
+                                    }
                                 }
-
 
                             }
                             else{
@@ -234,38 +283,48 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     reqState: State<ReqDataState>,
     provider: DataStoreProvider,
+    lazyGridState: LazyGridState,
+    back : () -> Unit,
     getToken : () -> Unit,
     refreshToken : (String) -> Unit,
     getData : () -> Unit,
     refreshVMValue : (token : String, refreshToken : String) -> Unit,
-    getScores : () -> Unit
+    getAddInfo : () -> Unit
 ) {
     val localWidth = LocalConfiguration.current
 //    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
-    val lazyGridState = rememberLazyGridState()
 
-
+    BackHandler {
+        back()
+    }
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .paint(painterResource(id = R.drawable.profile_bacjpeg), contentScale = ContentScale.Crop))
     LaunchedEffect(key1 = true) {
         val tokenTime = provider.getTokenTime.first()
         val systemTime = System.currentTimeMillis()/1000
         val tokenValue = provider.getToken.first()
         val refreshTokenValue = provider.getRefreshToken.first()
-        if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue == ""){
-            getToken()
-            getData()
+//        if (reqState.value.userScores != null){
+            if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue == ""){
+                getToken()
+                getData()
+            }
+            else if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue != ""){
+                refreshToken(refreshTokenValue)
+                getData()
+            }
+            else {
+                refreshVMValue(tokenValue,refreshTokenValue)
+                println(tokenValue)
+                println("mewow")
+                getData()
+            }
+            getAddInfo()
 
-        }
-        else if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue != ""){
-            refreshToken(refreshTokenValue)
-            getData()
-        }
-        else {
-            refreshVMValue(tokenValue,refreshTokenValue)
-            getData()
-        }
+//        }
 
-        getScores()
 
     }
 

@@ -1,5 +1,6 @@
 package com.example.osuapp.api
 
+import com.example.osuapp.api.friends.Friends
 import com.example.osuapp.api.news.NewsData
 import com.example.osuapp.api.scores.Beatmap
 import com.example.osuapp.api.scores.Scores
@@ -19,13 +20,18 @@ interface MainApi {
         @Header("Content-Type") type: String = "application/json",
         ): UserData
 
+    @GET("friends")
+    suspend fun getFriends(
+        @Header("Authorization") body: String,
+        @Header("Content-Type") type: String = "application/json",
+    ): Friends
 
     @GET("users/{id}/scores/{type}")
     suspend fun getUserScores(
         @Path("id") id : Int,
         @Path("type") type : String = "best",  // firsts, recent
         @Query("mode") mode : String = "osu",
-        @Query("limit") limit : Int = 12,
+        @Query("limit") limit : Int = 10,
         @Header("Authorization") body: String,
     ) : Scores
 

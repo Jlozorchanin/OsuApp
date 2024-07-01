@@ -1,8 +1,18 @@
 package com.example.osuapp.components
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.BasicTooltipBox
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,22 +20,37 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberBasicTooltipState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.materialIcon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,27 +62,35 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.osuapp.R
+import com.example.osuapp.api.friends.FriendsItem
 import com.example.osuapp.api.scores.ScoreItem
 import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.viewmodels.UserDataState
 import kotlin.math.roundToInt
 
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class,
+    ExperimentalAnimationApi::class
+)
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier, userState: State<UserDataState>,
-    reqState: State<ReqDataState>, back: () -> Unit,
+    reqState: State<ReqDataState>,lazyListState: LazyListState, back: () -> Unit,
+    openDetails: (ScoreItem) -> Unit
 ) {
     val localWidth = LocalConfiguration.current
     val firstToolTipState = rememberBasicTooltipState()
     val secondToolTipState = rememberBasicTooltipState()
     val thirdToolTipState = rememberBasicTooltipState()
+    var expanded by remember { mutableStateOf(false) }
+
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -67,6 +100,7 @@ fun ProfileScreen(
     }
 
     LazyColumn(
+        state = lazyListState,
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Start,
@@ -98,7 +132,7 @@ fun ProfileScreen(
 
                 .height(70.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
                 contentAlignment = Alignment.CenterStart)
             {
                 Row(
@@ -128,7 +162,7 @@ fun ProfileScreen(
                 .height(70.dp)
                 .padding(horizontal = localWidth.screenWidthDp.dp / 30)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
                 contentAlignment = Alignment.CenterStart)
             {
                 Row(
@@ -216,6 +250,83 @@ fun ProfileScreen(
 
 
 
+
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                ,
+                contentAlignment = Alignment.CenterStart
+            ){
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text= "Рекорды",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 26.sp,
+                        modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30, top = 16.dp)
+                    )
+                    IconButton(modifier = Modifier
+                        .size(100.dp)
+                        .padding(top = 18.dp)
+                        .offset(x = (-30).dp), onClick = {expanded=!expanded}){
+                        Icon(if (!expanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp, contentDescription = null)
+                    }
+                }
+
+
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        item{
+            AnimatedContent(
+                targetState = expanded,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(150, 150)) togetherWith
+                            fadeOut(animationSpec = tween(150)) using
+                            SizeTransform { initialSize, targetSize ->
+                                if (targetState) {
+                                    keyframes {
+                                        // Expand horizontally first.
+                                        IntSize(targetSize.width, initialSize.height) at 150
+                                        durationMillis = 300
+                                    }
+                                } else {
+                                    keyframes {
+                                        // Shrink vertically first.
+                                        IntSize(initialSize.width, targetSize.height) at 150
+                                        durationMillis = 300
+                                    }
+                                }
+                            }
+                }, label = ""
+            ) { targetExpanded ->
+                if (targetExpanded) {
+                    Column {
+                        for (i in reqState.value.userScores?: emptyList()){
+                            MapItem(score = i) {
+
+                            }
+                        }
+                    }
+                } else {
+                    reqState.value.userScores?.get(0)?.let {
+                        MapItem(score = it) {
+                            openDetails(it)
+                        }
+                    }
+                }
+            }
+
+        }
+
+
+//        items(reqState.value.userScores?: emptyList()){ score ->
+//            MapItem(score = score){
+//                openDetails(score)
+//            }
+//        }
+
         item {
             Box(
                 modifier = Modifier
@@ -224,17 +335,20 @@ fun ProfileScreen(
                 contentAlignment = Alignment.TopStart
             ){
                 Text(
-                    text= "Рекорды",
+                    text= "Друзья",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 26.sp,
                     modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30, top = 16.dp)
                 )
 
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        items(reqState.value.userScores?: emptyList()){ score ->
-            MapItem(score = score)
+        items(reqState.value.friends?: emptyList()){ friend ->
+            FriendItem(friend = friend) {
+
+            }
         }
         
         
@@ -250,7 +364,69 @@ fun ProfileScreen(
 }
 
 @Composable
-fun MapItem(modifier: Modifier = Modifier,score : ScoreItem) {
+fun FriendItem(modifier: Modifier = Modifier,friend : FriendsItem,openDetails : () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    Box(modifier = modifier
+        .fillMaxWidth()
+        .padding(
+            start = LocalConfiguration.current.screenWidthDp.dp / 30,
+            end = LocalConfiguration.current.screenWidthDp.dp / 30,
+            bottom = 16.dp,
+        )
+        .height(70.dp)
+        .clip(
+            RoundedCornerShape(
+                topStart = 32.dp,
+                bottomStart = 32.dp,
+                bottomEnd = 16.dp,
+                topEnd = 16.dp
+            )
+        ),
+        contentAlignment = Alignment.CenterStart)
+    {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.background),
+            verticalAlignment = Alignment.CenterVertically,
+            )
+        {
+            AsyncImage(
+                modifier = Modifier.clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)),
+                model = friend.avatar_url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+            )
+
+            Text(
+                modifier = Modifier.padding(start = 14.dp),
+                text = friend.username,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                fontSize = 18.sp,
+                maxLines = 1,
+                fontWeight = FontWeight.Bold
+            )
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd){
+                Text(
+                    modifier = Modifier.padding(end = 14.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontSize = 20.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    text = "#" +friend.statistics.global_rank.toString(),
+                )
+            }
+
+
+
+
+        }
+    }
+}
+
+@Composable
+fun MapItem(modifier: Modifier = Modifier,score : ScoreItem,openDetails : () -> Unit) {
     val uriHandler = LocalUriHandler.current
     Box(modifier = modifier
         .fillMaxWidth()
@@ -260,9 +436,7 @@ fun MapItem(modifier: Modifier = Modifier,score : ScoreItem) {
             bottom = 20.dp
         )
         .height(160.dp)
-        .clip(RoundedCornerShape(16.dp))
-        ,
-
+        .clip(RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.CenterStart)
     {
 
@@ -270,7 +444,8 @@ fun MapItem(modifier: Modifier = Modifier,score : ScoreItem) {
         Box(modifier = Modifier
             .fillMaxSize()
             .clickable {
-                uriHandler.openUri("https://osu.ppy.sh/beatmapsets/${score.beatmapset.id}/#${score.beatmap.mode}/${score.beatmap.id}")
+                openDetails()
+//                uriHandler.openUri("https://osu.ppy.sh/beatmapsets/${score.beatmapset.id}/#${score.beatmap.mode}/${score.beatmap.id}")
             }
             .background(
                 brush = Brush.verticalGradient(
@@ -318,6 +493,15 @@ fun MapItem(modifier: Modifier = Modifier,score : ScoreItem) {
                 color = MaterialTheme.colorScheme.onBackground,
 
                 text = "PP: " + score.pp.roundToInt().toString() + "   ACC: ${"%1.1f".format(score.accuracy*100)}%",
+                maxLines = 1,
+                fontWeight = FontWeight.SemiBold,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (score.mods.isNotEmpty())
+            Text(modifier = Modifier.padding(start = 14.dp,end = 8.dp,top=10.dp),
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                text = "MODS:  " + score.mods.toString().drop(1).removeSuffix("]"),
                 maxLines = 1,
                 fontWeight = FontWeight.SemiBold,
                 overflow = TextOverflow.Ellipsis

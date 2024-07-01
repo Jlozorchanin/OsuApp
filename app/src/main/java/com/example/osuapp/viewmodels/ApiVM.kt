@@ -7,6 +7,7 @@ import com.example.osuapp.api.Details
 import com.example.osuapp.api.MainApi
 import com.example.osuapp.api.OauthApi
 import com.example.osuapp.api.UserData
+import com.example.osuapp.api.friends.Friends
 import com.example.osuapp.api.news.NewsData
 import com.example.osuapp.api.scores.Beatmap
 import com.example.osuapp.api.scores.Scores
@@ -31,7 +32,7 @@ class ApiVM : ViewModel() {
         val service = MainApi.getInstance()
         viewModelScope.launch {
             try {
-                _requestsState.value = _requestsState.value.copy(news = service.getNews(), userScores = _requestsState.value.userScores, friendsScores = _requestsState.value.friendsScores,)
+                _requestsState.value = _requestsState.value.copy(news = service.getNews(), friends = _requestsState.value.friends, userScores = _requestsState.value.userScores, friendsScores = _requestsState.value.friendsScores,)
             }
             catch (e:Exception){
                 println(e.localizedMessage)
@@ -94,6 +95,26 @@ class ApiVM : ViewModel() {
         }
     }
 
+    fun getFriends(){
+        val userService = MainApi.getInstance()
+        viewModelScope.launch {
+            if (_tokenState.value.token?.access_token != ""){
+                for (i in 5..10){
+                    try {
+                        _requestsState.value = _requestsState.value.copy(friends = userService.getFriends(body = "Bearer ${tokenState.value.token!!.access_token}"), userScores = _requestsState.value.userScores,news = _requestsState.value.news, friendsScores = _requestsState.value.friendsScores,)
+                        break
+                    } catch (e: Exception) {
+                        println(e.localizedMessage)
+                        delay(1000)
+                    }
+                    if (i==9) println("smt went wrong in ApiVM - SCORES")
+                }
+            }
+            else {
+                println("bugs BRO")
+            }
+        }
+    }
 
     fun getBaseData(){
         val userService = MainApi.getInstance()
@@ -119,7 +140,7 @@ class ApiVM : ViewModel() {
             if (_tokenState.value.token?.access_token != ""){
                 for (i in 5..10){
                     try {
-                        _requestsState.value = _requestsState.value.copy(userScores = userService.getUserScores(id = _userDataState.value.data?.id ?: 0, body = "Bearer ${tokenState.value.token!!.access_token}"),news = _requestsState.value.news, friendsScores = _requestsState.value.friendsScores,)
+                        _requestsState.value = _requestsState.value.copy(userScores = userService.getUserScores(id = _userDataState.value.data?.id ?: 0, body = "Bearer ${tokenState.value.token!!.access_token}"), friends = _requestsState.value.friends,news = _requestsState.value.news, friendsScores = _requestsState.value.friendsScores,)
                         break
                     } catch (e: Exception) {
                         println(e.localizedMessage)
@@ -142,5 +163,5 @@ data class ReqDataState(
     var news: NewsData? = null,
     var userScores: Scores? = null,
     var friendsScores: MutableList<Scores>? = null,
-
+    var friends: Friends? = null
 )
