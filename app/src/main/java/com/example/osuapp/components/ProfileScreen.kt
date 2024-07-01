@@ -82,14 +82,16 @@ import kotlin.math.roundToInt
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier, userState: State<UserDataState>,
-    reqState: State<ReqDataState>,lazyListState: LazyListState, back: () -> Unit,
+    reqState: State<ReqDataState>,lazyListState: LazyListState,
+    expanded : Boolean,
+    back: () -> Unit,
+    changeExpanded : () -> Unit,
     openDetails: (ScoreItem) -> Unit
 ) {
     val localWidth = LocalConfiguration.current
     val firstToolTipState = rememberBasicTooltipState()
     val secondToolTipState = rememberBasicTooltipState()
     val thirdToolTipState = rememberBasicTooltipState()
-    var expanded by remember { mutableStateOf(false) }
 
 
     Box(modifier = Modifier
@@ -269,7 +271,7 @@ fun ProfileScreen(
                     IconButton(modifier = Modifier
                         .size(100.dp)
                         .padding(top = 18.dp)
-                        .offset(x = (-30).dp), onClick = {expanded=!expanded}){
+                        .offset(x = (-30).dp), onClick = {changeExpanded()}){
                         Icon(if (!expanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp, contentDescription = null)
                     }
                 }
@@ -305,7 +307,7 @@ fun ProfileScreen(
                     Column {
                         for (i in reqState.value.userScores?: emptyList()){
                             MapItem(score = i) {
-
+                                openDetails(i)
                             }
                         }
                     }

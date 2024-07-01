@@ -98,6 +98,9 @@ class MainActivity : ComponentActivity() {
                     val provider = DataStoreProvider(LocalContext.current)
                     val scope = rememberCoroutineScope()
                     val lazyGridState = rememberLazyGridState()
+                    var expanded by remember {
+                        mutableStateOf(false)
+                    }
                     val lazyColumnState = rememberLazyListState()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val requestsDataState = apiVM.requestsState.collectAsState()
@@ -235,6 +238,8 @@ class MainActivity : ComponentActivity() {
                                                 userState = userState,
                                                 lazyListState = lazyColumnState,
                                                 reqState = requestsDataState ,
+                                                expanded = expanded,
+                                                changeExpanded = {expanded = !expanded},
                                                 back = {uiVM.changeScreen(uiState.value.recentScreen,Screens.PROFILE)},
                                                 openDetails = {
                                                     uiVM.changeScore(it)
@@ -306,24 +311,24 @@ fun MainScreen(
         val systemTime = System.currentTimeMillis()/1000
         val tokenValue = provider.getToken.first()
         val refreshTokenValue = provider.getRefreshToken.first()
-//        if (reqState.value.userScores != null){
-            if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue == ""){
-                getToken()
-                getData()
-            }
-            else if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue != ""){
-                refreshToken(refreshTokenValue)
-                getData()
-            }
-            else {
-                refreshVMValue(tokenValue,refreshTokenValue)
-                println(tokenValue)
-                println("mewow")
-                getData()
-            }
-            getAddInfo()
 
-//        }
+        if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue == ""){
+            getToken()
+            getData()
+        }
+        else if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue != ""){
+            refreshToken(refreshTokenValue)
+            getData()
+        }
+        else {
+            refreshVMValue(tokenValue,refreshTokenValue)
+            println(tokenValue)
+            println("mewow")
+            getData()
+        }
+        getAddInfo()
+
+
 
 
     }
