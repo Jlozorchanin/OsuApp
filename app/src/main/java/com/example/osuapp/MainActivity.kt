@@ -75,6 +75,7 @@ import com.example.osuapp.components.NewsItem
 import com.example.osuapp.components.ProfileScreen
 import com.example.osuapp.components.WelcomeScreen
 import com.example.osuapp.viewmodels.Screens
+import com.example.osuapp.viewmodels.TokenState
 import com.example.osuapp.viewmodels.UiViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -174,6 +175,7 @@ class MainActivity : ComponentActivity() {
                                                 reqState = requestsDataState,
                                                 provider = provider,
                                                 lazyGridState = lazyGridState,
+                                                tokenState = tokenValue,
                                                 back = {
                                                     if (uiVM.uiState.value.recentScreen !=Screens.HOME){
                                                         uiVM.changeScreen(uiState.value.recentScreen,Screens.HOME)
@@ -287,6 +289,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(
     modifier: Modifier = Modifier,
     reqState: State<ReqDataState>,
+    tokenState : State<TokenState>,
     provider: DataStoreProvider,
     lazyGridState: LazyGridState,
     back : () -> Unit,
@@ -315,18 +318,21 @@ fun MainScreen(
         if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue == ""){
             getToken()
             getData()
+            getAddInfo()
         }
         else if (systemTime.toInt() - tokenTime.toString().toInt() > 86000 && tokenValue != ""){
             refreshToken(refreshTokenValue)
             getData()
+            getAddInfo()
         }
-        else {
+        else if (systemTime.toInt() - tokenTime.toString().toInt() < 86000 && tokenState.value.token?.access_token.isNullOrEmpty()){
             refreshVMValue(tokenValue,refreshTokenValue)
             println(tokenValue)
             println("mewow")
             getData()
+            getAddInfo()
         }
-        getAddInfo()
+
 
 
 

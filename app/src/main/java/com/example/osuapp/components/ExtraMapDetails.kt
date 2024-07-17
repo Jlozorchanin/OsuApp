@@ -52,6 +52,7 @@ fun Details(
 
 ) {
     val uriHandler = LocalUriHandler.current
+    val localWidth = LocalConfiguration.current
     Box(modifier = Modifier
         .fillMaxSize()
         .paint(
@@ -73,7 +74,7 @@ fun Details(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp)
+                    .padding(horizontal = localWidth.screenWidthDp.dp / 30)
                     .height(LocalConfiguration.current.screenHeightDp.dp / 3.5f),
                 contentAlignment = Alignment.TopCenter
             ) {
@@ -157,7 +158,7 @@ fun Details(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp, bottom = 8.dp)
-                    .padding(horizontal = 6.dp)
+                    .padding(horizontal = localWidth.screenWidthDp.dp / 30)
                     .height(70.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
@@ -212,7 +213,7 @@ fun BaseItem(modifier: Modifier = Modifier,title : String,data : String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 8.dp)
+            .padding(horizontal = LocalConfiguration.current.screenWidthDp.dp / 30, vertical = 8.dp)
             .height(70.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
