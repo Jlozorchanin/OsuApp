@@ -209,7 +209,7 @@ fun Details(
 }
 
 @Composable
-fun BaseItem(modifier: Modifier = Modifier,title : String,data : String) {
+fun BaseItem(title : String,data : String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

@@ -67,8 +67,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
+import com.example.compose.backgroundLight
 import com.example.osuapp.api.friends.Friends
 import com.example.osuapp.components.Details
+import com.example.osuapp.components.FriendDetails
 import com.example.osuapp.viewmodels.ApiVM
 import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.components.NewsItem
@@ -102,7 +104,11 @@ class MainActivity : ComponentActivity() {
                     var expanded by remember {
                         mutableStateOf(false)
                     }
+                    var friendsScreenExpanded by remember {
+                        mutableStateOf(false)
+                    }
                     val lazyColumnState = rememberLazyListState()
+                    val lazyColumnFriendsState = rememberLazyListState()
                     val tokenValue = apiVM.tokenState.collectAsState()
                     val requestsDataState = apiVM.requestsState.collectAsState()
                     val userState = apiVM.userDataState.collectAsState()
@@ -242,10 +248,14 @@ class MainActivity : ComponentActivity() {
                                                 reqState = requestsDataState ,
                                                 expanded = expanded,
                                                 changeExpanded = {expanded = !expanded},
-                                                back = {uiVM.changeScreen(uiState.value.recentScreen,Screens.PROFILE)},
+                                                back = {uiVM.changeScreen(Screens.HOME,Screens.PROFILE)},
                                                 openDetails = {
                                                     uiVM.changeScore(it)
                                                     uiVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.PROFILE)
+                                                },
+                                                openFriendDetail = {
+                                                    apiVM.getFriendData(it)
+                                                    uiVM.changeScreen(Screens.FRIEND_DETAILS,Screens.PROFILE)
                                                 }
                                                 )
 
@@ -256,13 +266,27 @@ class MainActivity : ComponentActivity() {
                                     Screens.FRIENDS -> TODO()
                                     Screens.SETTINGS -> TODO()
                                     Screens.WELCOME -> TODO()
+                                    Screens.FRIEND_DETAILS -> {
+                                        FriendDetails(
+                                            modifier = Modifier.padding(innerPadding),
+                                            userState = requestsDataState,
+                                            expanded = friendsScreenExpanded,
+                                            columnState = lazyColumnFriendsState,
+                                            back = {uiVM.changeScreen(Screens.PROFILE,Screens.PROFILE)},
+                                            changeExpanded = {friendsScreenExpanded = !friendsScreenExpanded},
+                                            openDetails = {
+                                                uiVM.changeScore(it)
+                                                uiVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.FRIEND_DETAILS)
+                                            },
+                                        )
+                                    }
                                     Screens.EXTRA_MAP_DETAILS -> Details(
                                         modifier = Modifier.padding(innerPadding),
                                         userState = userState,
                                         reqState = requestsDataState,
                                         score = uiState.value.score!!
                                     ) {
-                                        uiVM.changeScreen(uiState.value.recentScreen,Screens.HOME)
+                                        uiVM.changeScreen(uiState.value.recentScreen,uiState.value.recentScreen)
                                     }
                                 }
 

@@ -32,7 +32,7 @@ class ApiVM : ViewModel() {
         val service = MainApi.getInstance()
         viewModelScope.launch {
             try {
-                _requestsState.value = _requestsState.value.copy(news = service.getNews(), friends = _requestsState.value.friends, userScores = _requestsState.value.userScores, friendsScores = _requestsState.value.friendsScores,)
+                _requestsState.value = _requestsState.value.copy(news = service.getNews(), friends = _requestsState.value.friends, userScores = _requestsState.value.userScores, friendScore = _requestsState.value.friendScore, friendData = _requestsState.value.friendData)
             }
             catch (e:Exception){
                 println(e.localizedMessage)
@@ -101,7 +101,7 @@ class ApiVM : ViewModel() {
             if (_tokenState.value.token?.access_token != ""){
                 for (i in 5..10){
                     try {
-                        _requestsState.value = _requestsState.value.copy(friends = userService.getFriends(body = "Bearer ${tokenState.value.token!!.access_token}"), userScores = _requestsState.value.userScores,news = _requestsState.value.news, friendsScores = _requestsState.value.friendsScores,)
+                        _requestsState.value = _requestsState.value.copy(friends = userService.getFriends(body = "Bearer ${tokenState.value.token!!.access_token}"), userScores = _requestsState.value.userScores,news = _requestsState.value.news, friendScore = _requestsState.value.friendScore, friendData = _requestsState.value.friendData)
                         break
                     } catch (e: Exception) {
                         println(e.localizedMessage)
@@ -140,7 +140,7 @@ class ApiVM : ViewModel() {
             if (_tokenState.value.token?.access_token != ""){
                 for (i in 5..10){
                     try {
-                        _requestsState.value = _requestsState.value.copy(userScores = userService.getUserScores(id = _userDataState.value.data?.id ?: 0, body = "Bearer ${tokenState.value.token!!.access_token}"), friends = _requestsState.value.friends,news = _requestsState.value.news, friendsScores = _requestsState.value.friendsScores,)
+                        _requestsState.value = _requestsState.value.copy(userScores = userService.getUserScores(id = _userDataState.value.data?.id ?: 0, body = "Bearer ${tokenState.value.token!!.access_token}"), friends = _requestsState.value.friends,news = _requestsState.value.news, friendScore = _requestsState.value.friendScore, friendData = _requestsState.value.friendData)
                         break
                     } catch (e: Exception) {
                         println(e.localizedMessage)
@@ -154,6 +154,23 @@ class ApiVM : ViewModel() {
             }
         }
     }
+
+
+    fun getFriendData(friendId : Int){
+        val userService = MainApi.getInstance()
+        if (_tokenState.value.token?.access_token != ""){
+            viewModelScope.launch {
+                try {
+                    _requestsState.value = _requestsState.value.copy(friendData = userService.getFriendData(friendId, body = "Bearer ${tokenState.value.token!!.access_token}"), friendScore = userService.getUserScores(friendId,body = "Bearer ${tokenState.value.token!!.access_token}"), news = _requestsState.value.news, userScores = _requestsState.value.userScores, friends = _requestsState.value.friends)
+                } catch (e: Exception) {
+                    println(e.localizedMessage)
+                }
+            }
+        }
+
+    }
+
+
 }
 data class TokenState(var token: AuthUser? = null)
 
@@ -162,6 +179,7 @@ data class UserDataState(var data : UserData? = null)
 data class ReqDataState(
     var news: NewsData? = null,
     var userScores: Scores? = null,
-    var friendsScores: MutableList<Scores>? = null,
+    var friendScore: Scores? = null,
+    val friendData: UserData? = null,
     var friends: Friends? = null
 )

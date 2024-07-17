@@ -20,6 +20,13 @@ interface MainApi {
         @Header("Content-Type") type: String = "application/json",
         ): UserData
 
+    @GET("users/{id}/osu")
+    suspend fun getFriendData(
+        @Path("id") id : Int,
+        @Header("Authorization") body: String,
+        @Header("Content-Type") type: String = "application/json",
+    ): UserData
+
     @GET("friends")
     suspend fun getFriends(
         @Header("Authorization") body: String,

@@ -86,7 +86,8 @@ fun ProfileScreen(
     expanded : Boolean,
     back: () -> Unit,
     changeExpanded : () -> Unit,
-    openDetails: (ScoreItem) -> Unit
+    openDetails: (ScoreItem) -> Unit,
+    openFriendDetail : (friendId:Int) -> Unit
 ) {
     val localWidth = LocalConfiguration.current
     val firstToolTipState = rememberBasicTooltipState()
@@ -349,7 +350,7 @@ fun ProfileScreen(
 
         items(reqState.value.friends?: emptyList()){ friend ->
             FriendItem(friend = friend) {
-
+                openFriendDetail(friend.id)
             }
         }
         
@@ -389,6 +390,9 @@ fun FriendItem(modifier: Modifier = Modifier,friend : FriendsItem,openDetails : 
         Row(
             Modifier
                 .fillMaxSize()
+                .clickable {
+                    openDetails()
+                }
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.background),
             verticalAlignment = Alignment.CenterVertically,
