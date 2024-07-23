@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.example.osuapp.R
 
 @Composable
-fun WelcomeScreen(modifier: Modifier = Modifier, launchSettings : () -> Unit) {
+fun WelcomeScreen(modifier: Modifier = Modifier,goToFAQ : () -> Unit) {
     val uriHandler = LocalUriHandler.current
     val uri = "https://osu.ppy.sh/oauth/authorize?client_id=32490&redirect_uri=https://clovertestcode.online/osuapp&response_type=code&scope=public+identify+friends.read"
     

@@ -2,7 +2,6 @@ package com.example.osuapp
 
 import android.content.Intent
 import android.net.Uri
-import android.opengl.Visibility
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -15,7 +14,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,11 +27,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -67,15 +63,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.compose.OsuAppTheme
-import com.example.compose.backgroundLight
-import com.example.osuapp.api.friends.Friends
 import com.example.osuapp.components.Details
+import com.example.osuapp.components.FAQScreen
 import com.example.osuapp.components.FriendDetails
-import com.example.osuapp.viewmodels.ApiVM
-import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.components.NewsItem
 import com.example.osuapp.components.ProfileScreen
 import com.example.osuapp.components.WelcomeScreen
+import com.example.osuapp.viewmodels.ApiVM
+import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.viewmodels.Screens
 import com.example.osuapp.viewmodels.TokenState
 import com.example.osuapp.viewmodels.UiViewModel
@@ -105,8 +100,10 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(false)
                     }
                     var friendsScreenExpanded by remember {
-                        mutableStateOf(false)
+                        mutableStateOf(true)
                     }
+
+
                     val lazyColumnState = rememberLazyListState()
                     val lazyColumnFriendsState = rememberLazyListState()
                     val tokenValue = apiVM.tokenState.collectAsState()
@@ -115,6 +112,9 @@ class MainActivity : ComponentActivity() {
                     val uiState = uiVM.uiState.collectAsState()
                     var codeValue by remember {
                         mutableStateOf("")
+                    }
+                    var currentScreen by remember {
+                        mutableStateOf("welcome") // faq | welcome
                     }
                     var isTokenMissing by remember {
                         mutableStateOf(true)
@@ -135,15 +135,19 @@ class MainActivity : ComponentActivity() {
                             CenterAlignedTopAppBar(
                                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                                 title = {
-                                AnimatedVisibility(visible = userState.value.data?.username != null,
-                                    enter = fadeIn(tween(200))) {
-                                    Text(text = userState.value.data?.username ?: "", maxLines = 1, overflow = TextOverflow.Clip)
-                                }
-                            },
+//                                    SearchBar()
+                                    AnimatedVisibility(visible = userState.value.data?.username != null,
+                                        enter = fadeIn(tween(200))) {
+                                        Text(text = userState.value.data?.username ?: "", maxLines = 1, overflow = TextOverflow.Clip)
+                                    }
+                                },
                                 navigationIcon = {
-                                    IconButton(onClick = { /*TODO*/ }) {
+                                    IconButton(onClick = {
+                                        currentScreen = "faq"
+                                        uiVM.changeScreen(Screens.FAQ,uiState.value.recentScreen) }) {
                                         Icon(
-                                            imageVector = Icons.Filled.Menu,
+                                            modifier = Modifier.size(32.dp),
+                                            imageVector = Icons.Filled.Info,
                                             contentDescription = null
                                         )
                                     }
@@ -161,7 +165,7 @@ class MainActivity : ComponentActivity() {
                                                 .clickable {
                                                     uiVM.changeScreen(Screens.PROFILE, Screens.HOME)
                                                 },
-                                            model = userState.value.data?.avatar_url,
+                                            model = userState.value.data?.avatar_url ?: R.drawable.profile_bacjpeg,
                                             contentDescription = null
                                         )
                                     }
@@ -235,7 +239,7 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             )
                                         }
-                                        }
+                                    }
 
                                     Screens.PROFILE -> {
                                         AnimatedVisibility(visible = uiState.value.screen == Screens.PROFILE, enter = fadeIn(
@@ -257,15 +261,12 @@ class MainActivity : ComponentActivity() {
                                                     apiVM.getFriendData(it)
                                                     uiVM.changeScreen(Screens.FRIEND_DETAILS,Screens.PROFILE)
                                                 }
-                                                )
+                                            )
 
                                         }
 
                                     }
 
-                                    Screens.FRIENDS -> TODO()
-                                    Screens.SETTINGS -> TODO()
-                                    Screens.WELCOME -> TODO()
                                     Screens.FRIEND_DETAILS -> {
                                         FriendDetails(
                                             modifier = Modifier.padding(innerPadding),
@@ -288,23 +289,54 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         uiVM.changeScreen(uiState.value.recentScreen,uiState.value.recentScreen)
                                     }
+
+                                    Screens.FAQ -> {
+                                        FAQScreen(modifier = Modifier.padding(innerPadding), back = {uiVM.changeScreen(Screens.HOME,uiState.value.recentScreen) }) {
+                                            val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                            i.data = Uri.fromParts("package", packageName, null)
+                                            startActivity(i)
+                                        }
+                                    }
+
+
+
                                 }
 
                             }
                             else{
-                                WelcomeScreen {
-                                    val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                    i.data = Uri.fromParts("package", packageName, null)
-                                    startActivity(i)
+
+                                if (currentScreen == "welcome") {
+                                    WelcomeScreen(
+                                    goToFAQ = {
+                                        currentScreen = "faq"
+                                    }
+
+                                    )
                                 }
+                                else if (currentScreen == "faq") {
+                                    FAQScreen(modifier = Modifier.padding(top = 50.dp),
+                                        back = {
+                                            currentScreen = "welcome"
+                                            uiVM.changeScreen(Screens.HOME,Screens.HOME)
+                                        },
+                                        launchSettings = {
+                                            val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                            i.data = Uri.fromParts("package", packageName, null)
+                                            startActivity(i)
+                                        },
+                                    )
+                                }
+
+
                             }
-                            }
+                        }
 
 
                     )
                 }
             }
         }
+
     }
 }
 
