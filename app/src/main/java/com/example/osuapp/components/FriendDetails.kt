@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -91,11 +92,11 @@ fun FriendDetails(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp),
+                    .heightIn(40.dp,60.dp),
                 contentAlignment = Alignment.TopStart
             ){
                 Text(
-                    text= "Основные сведения",
+                    text= ("Сведения игрока ${userState.value.friendData?.username?: ""}"),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 26.sp,
                     modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
