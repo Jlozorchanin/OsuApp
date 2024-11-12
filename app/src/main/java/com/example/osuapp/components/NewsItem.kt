@@ -68,7 +68,6 @@ fun NewsItem(modifier: Modifier = Modifier,post: NewsPost,onClick : (String) -> 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-
 //                .padding(start = 8.dp, end = 24.dp)
                 .clip(
                     RoundedCornerShape(28.dp)

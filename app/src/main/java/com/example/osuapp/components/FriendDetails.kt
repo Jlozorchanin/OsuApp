@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,11 +41,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +61,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.osuapp.R
 import com.example.osuapp.api.scores.ScoreItem
+import com.example.osuapp.graph.ChartStyle
+import com.example.osuapp.graph.DataPoint
+import com.example.osuapp.graph.LineGraph
 import com.example.osuapp.viewmodels.ReqDataState
 import kotlin.math.roundToInt
 
@@ -73,7 +83,29 @@ fun FriendDetails(
     val firstToolTipState = rememberBasicTooltipState()
     val secondToolTipState = rememberBasicTooltipState()
     val thirdToolTipState = rememberBasicTooltipState()
-
+    val dataPoints by remember(userState.value.friendData) {
+        mutableStateOf(
+            userState.value.friendData?.rankHistory?.data?.mapIndexed { index, result ->
+                DataPoint(
+                    x = index.toFloat(),
+                    y = - result.toFloat(),
+                    xLabel = result.toString()
+                )
+            } ?: emptyList<DataPoint>()
+        )
+    }
+    var selectedDataPoint by remember {
+        mutableStateOf<DataPoint?>(dataPoints.last())
+    }
+    var labelWidth by remember {
+        mutableFloatStateOf(0f)
+    }
+    var totalChartWidth by remember {
+        mutableFloatStateOf(0f)
+    }
+    val amountOfVisibleDataPoints = if(labelWidth > 0){
+        ((totalChartWidth - 2.5 * labelWidth) / labelWidth).toInt()
+    } else 0
     Box(modifier = Modifier
         .fillMaxSize()
         .paint(painterResource(id = R.drawable.profile_bacjpeg), contentScale = ContentScale.Crop))
@@ -227,6 +259,55 @@ fun FriendDetails(
             }
 
         }
+        if(dataPoints.isNotEmpty()){
+            item{
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end =12.dp, start = 12.dp,top = 16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            MaterialTheme.colorScheme.background.copy(.7f)
+                        )
+
+
+                    ,
+                    contentAlignment = Alignment.CenterStart
+                ){
+                    LineGraph(
+                        dataPoints = dataPoints,
+                        style = ChartStyle(
+                            chartLineColor = MaterialTheme.colorScheme.primary,
+                            unselectedColor = MaterialTheme.colorScheme.secondary,
+                            selectedColor = MaterialTheme.colorScheme.primary,
+                            helperLinesThickness = 5f,
+                            axisLinesThickness = 5f,
+                            labelFontSize = 14.sp,
+                            minYLabelSpacing = 20.dp,
+                            verticalPadding = 8.dp,
+                            horizontalPadding = 8.dp,
+                            xAxisLabelSpacing = 8.dp,
+                        ),
+                        visibleDataPointsIndices = 1..89,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .aspectRatio(16/9f)
+                            .onSizeChanged { totalChartWidth = it.width.toFloat() }
+                            .padding(end = 28.dp)
+                            .offset((-10).dp)
+
+                        ,
+                        selectedDataPoint = selectedDataPoint,
+                        onSelectedDataPoint = {selectedDataPoint = it},
+                        onXLabelWidthChange = {
+                            labelWidth = it
+                        }
+                    )
+
+                }
+            }
+        }
+
 
         item {
             Box(

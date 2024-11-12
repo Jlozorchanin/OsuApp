@@ -9,7 +9,7 @@ import com.example.osuapp.api.OauthApi
 import com.example.osuapp.api.UserData
 import com.example.osuapp.api.friends.Friends
 import com.example.osuapp.api.news.NewsData
-import com.example.osuapp.api.scores.Beatmap
+import com.example.osuapp.api.scores.ScoreItem
 import com.example.osuapp.api.scores.Scores
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,9 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ApiVM : ViewModel() {
+class MainVM : ViewModel() {
     private val _tokenState: MutableStateFlow<TokenState> = MutableStateFlow(TokenState())
     val tokenState: StateFlow<TokenState> = _tokenState.asStateFlow()
+
+    private val _uiState : MutableStateFlow<UiState> = MutableStateFlow(UiState())
+    val uiState : StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _requestsState : MutableStateFlow<ReqDataState> = MutableStateFlow(ReqDataState())
     val requestsState : StateFlow<ReqDataState> = _requestsState.asStateFlow()
@@ -50,7 +53,7 @@ class ApiVM : ViewModel() {
                         "client_secret" to Details().client_secret,
                         "grant_type" to "authorization_code",
                         "code" to code,
-                        "redirect_uri" to "https://clovertestcode.online/osuapp"
+                        "redirect_uri" to "https://violett.tech/osuapp"
                     )
                 ))
                 saveData(_tokenState.value.token!!)
@@ -111,7 +114,7 @@ class ApiVM : ViewModel() {
                 }
             }
             else {
-                println("bugs BRO")
+                println("wtf")
             }
         }
     }
@@ -132,6 +135,7 @@ class ApiVM : ViewModel() {
                 }
             }
         }
+
     }
 
     fun getScores(){
@@ -150,24 +154,41 @@ class ApiVM : ViewModel() {
                 }
             }
             else {
-                println("bugs BRO")
+                println("wtf")
             }
         }
     }
 
 
     fun getFriendData(friendId : Int){
-        val userService = MainApi.getInstance()
-        if (_tokenState.value.token?.access_token != ""){
-            viewModelScope.launch {
-                try {
-                    _requestsState.value = _requestsState.value.copy(friendData = userService.getFriendData(friendId, body = "Bearer ${tokenState.value.token!!.access_token}"), friendScore = userService.getUserScores(friendId,body = "Bearer ${tokenState.value.token!!.access_token}"), news = _requestsState.value.news, userScores = _requestsState.value.userScores, friends = _requestsState.value.friends)
-                } catch (e: Exception) {
-                    println(e.localizedMessage)
+        if (_requestsState.value.friendData == null || friendId != _requestsState.value.friendData?.id){
+            changeScreen(screen = Screens.LOADING, currentScreen = Screens.PROFILE)
+            val userService = MainApi.getInstance()
+            if (_tokenState.value.token?.access_token != ""){
+                viewModelScope.launch {
+                    try {
+                        _requestsState.value = _requestsState.value.copy(friendData = userService.getFriendData(friendId, body = "Bearer ${tokenState.value.token!!.access_token}"), friendScore = userService.getUserScores(friendId,body = "Bearer ${tokenState.value.token!!.access_token}"), news = _requestsState.value.news, userScores = _requestsState.value.userScores, friends = _requestsState.value.friends)
+                        changeScreen(screen = Screens.FRIEND_DETAILS, currentScreen = Screens.PROFILE)
+                    } catch (e: Exception) {
+                        println(e.localizedMessage)
+                    }
                 }
             }
+        } else{
+            changeScreen(screen = Screens.FRIEND_DETAILS, currentScreen = Screens.PROFILE)
         }
 
+
+
+    }
+
+
+    fun changeScreen(screen: Screens,currentScreen : Screens){
+        _uiState.value = _uiState.value.copy(screen = screen, recentScreen = currentScreen,score = _uiState.value.score)
+    }
+
+    fun changeScore(score: ScoreItem){
+        _uiState.value = _uiState.value.copy(score=score,screen = _uiState.value.screen, recentScreen = _uiState.value.recentScreen)
     }
 
 
@@ -183,3 +204,13 @@ data class ReqDataState(
     val friendData: UserData? = null,
     var friends: Friends? = null
 )
+
+data class UiState(
+    val screen : Screens = Screens.HOME,
+    val recentScreen : Screens = Screens.HOME,
+    val score: ScoreItem? = null
+)
+
+enum class Screens {
+    HOME, PROFILE, EXTRA_MAP_DETAILS, FRIEND_DETAILS, FAQ, LOADING
+}

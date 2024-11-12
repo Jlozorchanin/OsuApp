@@ -112,7 +112,6 @@ fun Details(
                 Column(
                     Modifier
                         .fillMaxSize()
-
                         .clip(RoundedCornerShape(16.dp)),
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.Start

@@ -2,6 +2,7 @@ package com.example.osuapp
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -10,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -31,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,11 +72,10 @@ import com.example.osuapp.components.FriendDetails
 import com.example.osuapp.components.NewsItem
 import com.example.osuapp.components.ProfileScreen
 import com.example.osuapp.components.WelcomeScreen
-import com.example.osuapp.viewmodels.ApiVM
+import com.example.osuapp.viewmodels.MainVM
 import com.example.osuapp.viewmodels.ReqDataState
 import com.example.osuapp.viewmodels.Screens
 import com.example.osuapp.viewmodels.TokenState
-import com.example.osuapp.viewmodels.UiViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -90,8 +92,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OsuAppTheme(darkTheme = true) {
-                val apiVM by viewModels<ApiVM>()
-                val uiVM by viewModels<UiViewModel>()
+                val mainVM by viewModels<MainVM>()
                 Surface {
                     val provider = DataStoreProvider(LocalContext.current)
                     val scope = rememberCoroutineScope()
@@ -106,10 +107,10 @@ class MainActivity : ComponentActivity() {
 
                     val lazyColumnState = rememberLazyListState()
                     val lazyColumnFriendsState = rememberLazyListState()
-                    val tokenValue = apiVM.tokenState.collectAsState()
-                    val requestsDataState = apiVM.requestsState.collectAsState()
-                    val userState = apiVM.userDataState.collectAsState()
-                    val uiState = uiVM.uiState.collectAsState()
+                    val tokenValue = mainVM.tokenState.collectAsState()
+                    val requestsDataState = mainVM.requestsState.collectAsState()
+                    val userState = mainVM.userDataState.collectAsState()
+                    val uiState = mainVM.uiState.collectAsState()
                     var codeValue by remember {
                         mutableStateOf("")
                     }
@@ -119,7 +120,7 @@ class MainActivity : ComponentActivity() {
                     var isTokenMissing by remember {
                         mutableStateOf(true)
                     }
-                    if(intent.action == Intent.ACTION_VIEW && intent.data?.host == "clovertestcode.online"){
+                    if(intent.action == Intent.ACTION_VIEW && intent.data?.host == "violett.tech"){
                         codeValue = intent.data?.getQueryParameter("code")?: ""
                         isTokenMissing = false
                         runBlocking {  provider.saveInfo(false)}
@@ -144,7 +145,7 @@ class MainActivity : ComponentActivity() {
                                 navigationIcon = {
                                     IconButton(onClick = {
                                         currentScreen = "faq"
-                                        uiVM.changeScreen(Screens.FAQ,uiState.value.recentScreen) }) {
+                                        mainVM.changeScreen(Screens.FAQ,uiState.value.recentScreen) }) {
                                         Icon(
                                             modifier = Modifier.size(32.dp),
                                             imageVector = Icons.Filled.Info,
@@ -163,14 +164,14 @@ class MainActivity : ComponentActivity() {
                                                 .clip(RoundedCornerShape(50.dp))
                                                 .size(55.dp)
                                                 .clickable {
-                                                    uiVM.changeScreen(Screens.PROFILE, Screens.HOME)
+                                                    mainVM.changeScreen(Screens.PROFILE, Screens.HOME)
                                                 },
                                             model = userState.value.data?.avatar_url ?: R.drawable.profile_bacjpeg,
                                             contentDescription = null
                                         )
                                     }
 
-                                }
+                                },
                             )
                         },
                         content = { innerPadding ->
@@ -187,8 +188,8 @@ class MainActivity : ComponentActivity() {
                                                 lazyGridState = lazyGridState,
                                                 tokenState = tokenValue,
                                                 back = {
-                                                    if (uiVM.uiState.value.recentScreen !=Screens.HOME){
-                                                        uiVM.changeScreen(uiState.value.recentScreen,Screens.HOME)
+                                                    if (mainVM.uiState.value.recentScreen !=Screens.HOME){
+                                                        mainVM.changeScreen(uiState.value.recentScreen,Screens.HOME)
                                                     }
 
                                                 },
@@ -196,7 +197,7 @@ class MainActivity : ComponentActivity() {
                                                     if (codeValue == "") {
                                                         isTokenMissing = true
                                                     } else {
-                                                        apiVM.getTokenFromCode(codeValue) {
+                                                        mainVM.getTokenFromCode(codeValue) {
                                                             scope.launch {
                                                                 provider.saveBaseData(
                                                                     time = (System.currentTimeMillis() / 1000).toInt(),
@@ -213,7 +214,7 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 },
                                                 refreshToken = {
-                                                    apiVM.updateTokenValue(it) {
+                                                    mainVM.updateTokenValue(it) {
                                                         scope.launch {
                                                             provider.saveBaseData(
                                                                 time = (System.currentTimeMillis() / 1000).toInt(),
@@ -228,14 +229,14 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 },
                                                 refreshVMValue = { token, refresh ->
-                                                    apiVM.updateDataFromDataStore(token, refresh)
+                                                    mainVM.updateDataFromDataStore(token, refresh)
                                                 },
                                                 getData = {
-                                                    apiVM.getBaseData()
+                                                    mainVM.getBaseData()
                                                 },
                                                 getAddInfo = {
-                                                    apiVM.getScores()
-                                                    apiVM.getFriends()
+                                                    mainVM.getScores()
+                                                    mainVM.getFriends()
                                                 }
                                             )
                                         }
@@ -252,14 +253,13 @@ class MainActivity : ComponentActivity() {
                                                 reqState = requestsDataState ,
                                                 expanded = expanded,
                                                 changeExpanded = {expanded = !expanded},
-                                                back = {uiVM.changeScreen(Screens.HOME,Screens.PROFILE)},
+                                                back = {mainVM.changeScreen(Screens.HOME,Screens.PROFILE)},
                                                 openDetails = {
-                                                    uiVM.changeScore(it)
-                                                    uiVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.PROFILE)
+                                                    mainVM.changeScore(it)
+                                                    mainVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.PROFILE)
                                                 },
                                                 openFriendDetail = {
-                                                    apiVM.getFriendData(it)
-                                                    uiVM.changeScreen(Screens.FRIEND_DETAILS,Screens.PROFILE)
+                                                    mainVM.getFriendData(it)
                                                 }
                                             )
 
@@ -273,11 +273,11 @@ class MainActivity : ComponentActivity() {
                                             userState = requestsDataState,
                                             expanded = friendsScreenExpanded,
                                             columnState = lazyColumnFriendsState,
-                                            back = {uiVM.changeScreen(Screens.PROFILE,Screens.PROFILE)},
+                                            back = {mainVM.changeScreen(Screens.PROFILE,Screens.PROFILE)},
                                             changeExpanded = {friendsScreenExpanded = !friendsScreenExpanded},
                                             openDetails = {
-                                                uiVM.changeScore(it)
-                                                uiVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.FRIEND_DETAILS)
+                                                mainVM.changeScore(it)
+                                                mainVM.changeScreen(Screens.EXTRA_MAP_DETAILS,Screens.FRIEND_DETAILS)
                                             },
                                         )
                                     }
@@ -287,19 +287,29 @@ class MainActivity : ComponentActivity() {
                                         reqState = requestsDataState,
                                         score = uiState.value.score!!
                                     ) {
-                                        uiVM.changeScreen(uiState.value.recentScreen,uiState.value.recentScreen)
+                                        mainVM.changeScreen(uiState.value.recentScreen,uiState.value.recentScreen)
                                     }
 
                                     Screens.FAQ -> {
-                                        FAQScreen(modifier = Modifier.padding(innerPadding), back = {uiVM.changeScreen(Screens.HOME,uiState.value.recentScreen) }) {
-                                            val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                        FAQScreen(modifier = Modifier.padding(innerPadding), back = {mainVM.changeScreen(Screens.HOME,uiState.value.recentScreen) }) {
+                                            val i = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS)
+                                            } else {
+                                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                            }
                                             i.data = Uri.fromParts("package", packageName, null)
                                             startActivity(i)
                                         }
                                     }
 
-
-
+                                    Screens.LOADING -> Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(innerPadding),
+                                        contentAlignment = Alignment.Center
+                                    ){
+                                        CircularProgressIndicator()
+                                    }
                                 }
 
                             }
@@ -309,18 +319,20 @@ class MainActivity : ComponentActivity() {
                                     WelcomeScreen(
                                     goToFAQ = {
                                         currentScreen = "faq"
-                                    }
-
-                                    )
+                                    })
                                 }
                                 else if (currentScreen == "faq") {
                                     FAQScreen(modifier = Modifier.padding(top = 50.dp),
                                         back = {
                                             currentScreen = "welcome"
-                                            uiVM.changeScreen(Screens.HOME,Screens.HOME)
+                                            mainVM.changeScreen(Screens.HOME,Screens.HOME)
                                         },
                                         launchSettings = {
-                                            val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                            val i = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS)
+                                            } else {
+                                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                            }
                                             i.data = Uri.fromParts("package", packageName, null)
                                             startActivity(i)
                                         },
@@ -356,7 +368,6 @@ fun MainScreen(
     getAddInfo : () -> Unit
 ) {
     val localWidth = LocalConfiguration.current
-//    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
 
     BackHandler {
@@ -383,55 +394,57 @@ fun MainScreen(
         }
         else if (systemTime.toInt() - tokenTime.toString().toInt() < 86000 && tokenState.value.token?.access_token.isNullOrEmpty()){
             refreshVMValue(tokenValue,refreshTokenValue)
-            println(tokenValue)
-            println("mewow")
+//            println(tokenValue)
             getData()
             getAddInfo()
         }
 
 
-
-
-
     }
+    AnimatedContent(reqState.value.news?.news_posts, label = "") { target ->
 
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+        if (target != null){
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(500.dp),
+                    state = lazyGridState,
+                    modifier = Modifier.fillMaxSize(),
 
-        if (reqState.value.news?.news_posts != null){
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(500.dp),
-                state = lazyGridState,
-                modifier = Modifier.fillMaxSize(),
+                    ) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.TopStart
+                        ) {
+                            Text(
+                                text = "Недавние новости",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 26.sp,
+                                modifier = Modifier.padding(start = localWidth.screenWidthDp.dp / 30)
+                            )
 
-            ) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp),
-                        contentAlignment = Alignment.TopStart
-                    ){
-                        Text(
-                            text= "Недавние новости",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 26.sp,
-                            modifier = Modifier.padding(start = localWidth.screenWidthDp.dp/30)
-                        )
-
+                        }
                     }
-                }
-                item {
-
-                }
-                items(reqState.value.news?.news_posts!!) {post ->
-                    NewsItem(post = post){
-                        uriHandler.openUri("https://osu.ppy.sh/home/news/$it")
+                    items(reqState.value.news?.news_posts!!) { post ->
+                        NewsItem(post = post) {
+                            uriHandler.openUri("https://osu.ppy.sh/home/news/$it")
+                        }
                     }
-                }
 
+                }
+            }
+        }else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                ,
+                contentAlignment = Alignment.Center
+            ){
+                CircularProgressIndicator()
             }
         }
-
     }
     
 }
