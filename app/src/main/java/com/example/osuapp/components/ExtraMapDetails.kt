@@ -160,7 +160,7 @@ fun Details(
                     .padding(horizontal = localWidth.screenWidthDp.dp / 30)
                     .height(70.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
+                    .background(MaterialTheme.colorScheme.background.copy(.8f)),
 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
@@ -185,7 +185,6 @@ fun Details(
             }
         }
         item {
-            
             BaseItem(title = "AR/OD/HP/DIF:", data = "${score.beatmap.ar}/${score.beatmap.accuracy}/${score.beatmap.drain}/${"%1.2f".format(score.beatmap.difficulty_rating)}" )
         }
         item { 
@@ -215,7 +214,7 @@ fun BaseItem(title : String,data : String) {
             .padding(horizontal = LocalConfiguration.current.screenWidthDp.dp / 30, vertical = 8.dp)
             .height(70.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
+            .background(MaterialTheme.colorScheme.background.copy(.8f)),
 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start

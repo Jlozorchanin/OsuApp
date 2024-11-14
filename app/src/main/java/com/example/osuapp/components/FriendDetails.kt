@@ -144,7 +144,7 @@ fun FriendDetails(
 
                 .height(70.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
+                .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.CenterStart)
             {
                 Row(
@@ -174,7 +174,7 @@ fun FriendDetails(
                 .height(70.dp)
                 .padding(horizontal = localWidth.screenWidthDp.dp / 30)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
+                .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.CenterStart)
             {
                 Row(
@@ -267,7 +267,7 @@ fun FriendDetails(
                         .padding(end =12.dp, start = 12.dp,top = 16.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(
-                            MaterialTheme.colorScheme.background.copy(.7f)
+                            MaterialTheme.colorScheme.background.copy(.8f)
                         )
 
 

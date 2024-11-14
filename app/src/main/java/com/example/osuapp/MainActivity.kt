@@ -302,13 +302,17 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
 
-                                    Screens.LOADING -> Box(
-                                        modifier = Modifier
+                                    Screens.LOADING -> {
+                                        Box(modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(innerPadding),
-                                        contentAlignment = Alignment.Center
-                                    ){
-                                        CircularProgressIndicator()
+                                            .paint(
+                                                painter = painterResource(id = R.drawable.profile_bacjpeg),
+                                                contentScale = ContentScale.Crop
+                                            ),
+                                            contentAlignment = Alignment.Center
+                                        ){
+                                            CircularProgressIndicator()
+                                        }
                                     }
                                 }
 
@@ -436,10 +440,12 @@ fun MainScreen(
                 }
             }
         }else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                ,
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .paint(
+                    painter = painterResource(id = R.drawable.profile_bacjpeg),
+                    contentScale = ContentScale.Crop
+                ),
                 contentAlignment = Alignment.Center
             ){
                 CircularProgressIndicator()

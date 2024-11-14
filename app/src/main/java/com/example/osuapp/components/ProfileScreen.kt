@@ -162,7 +162,7 @@ fun ProfileScreen(
 
                 .height(70.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
+                .background(MaterialTheme.colorScheme.background.copy(.8f)),
                 contentAlignment = Alignment.CenterStart)
             {
                 Row(
@@ -192,7 +192,7 @@ fun ProfileScreen(
                 .height(70.dp)
                 .padding(horizontal = localWidth.screenWidthDp.dp / 30)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(.85f)),
+                .background(MaterialTheme.colorScheme.background.copy(.8f)),
                 contentAlignment = Alignment.CenterStart)
             {
                 Row(
@@ -288,7 +288,7 @@ fun ProfileScreen(
                     .padding(end =12.dp, start = 12.dp,top = 16.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(
-                        MaterialTheme.colorScheme.background.copy(.7f)
+                        MaterialTheme.colorScheme.background.copy(.8f)
                     )
 
 
@@ -467,7 +467,7 @@ fun FriendItem(modifier: Modifier = Modifier,friend : FriendsItem,openDetails : 
                     openDetails()
                 }
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.background),
+                .background(MaterialTheme.colorScheme.background.copy(.8f)),
             verticalAlignment = Alignment.CenterVertically,
             )
         {
