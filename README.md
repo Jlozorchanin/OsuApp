@@ -1,4 +1,4 @@
-**OsuApp** — ваш помощник в мире osu! Это приложение позволяет вам легко просматривать официальные новости игры, следить за рекордами ваших друзей и собственными достижениями, а также анализировать статистику по картам. Сравнивайте результаты и улучшайте свои навыки с OsuApp!
+**OsuApp** — your assistant in the world of osu! This application allows you to easily access official game news, track your friends' records and your own achievements, and analyze map statistics. Compare results and enhance your skills with OsuApp!
 
 
 
